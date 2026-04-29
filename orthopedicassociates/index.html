@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategic Plays Dashboard | Orthopedic Associates</title>
+
+  <!-- Google Fonts: Roboto 400, 500 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-page: #0e1520;
+      --bg-card: #1a2838;
+      --border: #283848;
+      --border-selected: #4e9df7;
+      --text-muted: #6b7a8d;
+      --text-body: #8a99ab;
+      --metric-red: #ef6a5e;
+      --metric-green: #36d399;
+      --metric-blue: #4e9df7;
+      --metric-purple: #8b5cf6;
+      --amber: #f7a600;
+      --btn-primary: #00529b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: auto; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-page); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-page); }
+    body { background: var(--bg-page); color: #e2e8f0; font-family: 'Roboto', sans-serif; font-weight: 400; font-size: 14px; line-height: 1.5; padding: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px 16px; text-align: center; position: relative; }
+    .stat-card__value { font-size: 52px; font-weight: 500; line-height: 1.1; margin-bottom: 4px; }
+    .stat-card__label { font-size: 16px; font-weight: 500; color: #e2e8f0; margin-bottom: 2px; }
+    .stat-card__subtitle { font-size: 13px; color: var(--text-muted); }
+    .pulse-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--metric-red); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 106, 94, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(239, 106, 94, 0); } }
+    .dashboard { display: flex; gap: 24px; align-items: flex-start; }
+    .col-left { width: 40%; min-width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 24px; }
+    .col-right { flex: 1; min-width: 0; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-header__title { font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+    .count-pill { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 12px; line-height: 1.4; }
+    .count-pill--blue { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .count-pill--red { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .play-item-ip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .play-item-ip:hover { border-color: var(--text-muted); }
+    .play-item-ip.selected { border-color: var(--border-selected); }
+    .play-item-ip__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .play-item-ip__title { font-size: 14px; font-weight: 500; color: #e2e8f0; }
+    .play-item-ip__pct { font-size: 13px; font-weight: 500; }
+    .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .progress-bar__fill { height: 100%; border-radius: 2px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    .play-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+    .play-item:hover { border-color: var(--text-muted); }
+    .play-item.selected { border-color: var(--border-selected); }
+    .play-item.read .play-item__title { color: var(--text-body); }
+    .play-item__unread-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--metric-red); }
+    .play-item.read .play-item__unread-dot { display: none; }
+    .play-item__title { font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 6px; padding-right: 20px; }
+    .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge--source { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .badge--critical { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .badge--medium { background: rgba(247, 166, 0, 0.12); color: var(--amber); }
+    .badge--credits { background: rgba(54, 211, 153, 0.12); color: var(--metric-green); }
+    .badge--procedure { background: rgba(139, 92, 246, 0.12); color: var(--metric-purple); }
+    .toggle-link { display: inline-block; font-size: 13px; color: var(--metric-blue); cursor: pointer; margin-top: 4px; user-select: none; }
+    .toggle-link:hover { text-decoration: underline; }
+    .completed-section { display: none; margin-top: 12px; }
+    .completed-section.visible { display: block; }
+    .play-item-completed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; opacity: 0.6; transition: opacity 0.15s, border-color 0.15s; position: relative; }
+    .play-item-completed:hover { opacity: 0.85; border-color: var(--text-muted); }
+    .play-item-completed.selected { border-color: var(--border-selected); opacity: 0.85; }
+    .play-item-completed__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .play-item-completed__check { color: var(--metric-green); font-size: 14px; flex-shrink: 0; }
+    .play-item-completed__title { font-size: 14px; font-weight: 500; color: var(--text-body); }
+    .play-item-completed__outcome { font-size: 12px; color: var(--metric-green); margin-left: 22px; }
+    .detail-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+    .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .detail-header__icon { width: 28px; height: 28px; flex-shrink: 0; }
+    .detail-header__source { font-size: 13px; font-weight: 500; color: var(--text-body); }
+    .detail-header__priority { margin-left: auto; }
+    .detail-title { font-size: 20px; font-weight: 500; color: #e2e8f0; margin-bottom: 16px; }
+    .detail-query-box { background: var(--bg-page); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-body); margin-bottom: 20px; font-style: italic; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-section__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #e2e8f0; margin-bottom: 6px; }
+    .detail-section__body { font-size: 14px; color: var(--text-body); line-height: 1.6; }
+    .hl-green { background: rgba(54, 211, 153, 0.1); color: var(--metric-green); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .hl-blue { background: rgba(78, 157, 247, 0.1); color: var(--metric-blue); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .procedure-block { background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .procedure-block__header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .procedure-block__icon { width: 22px; height: 22px; flex-shrink: 0; }
+    .procedure-block__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .procedure-block__title { font-size: 18px; font-weight: 500; color: #e2e8f0; margin-bottom: 14px; }
+    .procedure-block__list { list-style: none; margin-bottom: 14px; }
+    .procedure-block__list li { font-size: 13px; color: var(--text-body); line-height: 1.7; padding-left: 16px; position: relative; }
+    .procedure-block__list li::before { content: "•"; position: absolute; left: 0; color: var(--text-muted); }
+    .procedure-block__list li strong { color: #e2e8f0; font-weight: 500; }
+    .procedure-block__cost { font-size: 14px; font-weight: 500; color: var(--metric-green); margin-bottom: 16px; }
+    .procedure-block__actions { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; font-family: 'Roboto', sans-serif; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn--primary { background: var(--btn-primary); color: #ffffff; }
+    .btn--ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .detail-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+    .demo-banner { background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.25); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .demo-banner__icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--amber); }
+    .demo-banner__content { flex: 1; }
+    .demo-banner__title { font-size: 14px; font-weight: 500; color: var(--amber); margin-bottom: 4px; }
+    .demo-banner__text { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+    .demo-notice { margin-top: 12px; padding: 10px 14px; background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.2); border-radius: 6px; font-size: 12px; color: var(--amber); line-height: 1.5; animation: fadeInNotice 0.3s ease; }
+    @keyframes fadeInNotice { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .play-item__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .play-item__meta-left { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .play-item__meta-right { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+    .detail-progress { margin-top: 24px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .detail-progress__label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+    .detail-progress__bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .detail-progress__fill { height: 100%; border-radius: 4px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    @keyframes fillBar { from { width: 0; } }
+    .detail-progress__pct { font-size: 14px; font-weight: 500; text-align: right; }
+  </style>
+</head>
+<body>
+
+  <div class="demo-banner">
+    <div class="demo-banner__icon">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+    </div>
+    <div class="demo-banner__content">
+      <div class="demo-banner__title">Demo Mode Active</div>
+      <div class="demo-banner__text">This is a demonstration of the Patient Genius platform built using Orthopedic Associates' market data. Strategic plays, competitor analysis, and recommendations shown here are illustrative of how the system surfaces opportunities mid-engagement. Year-two plays focus on extending wins from year one and productizing the &quot;everything under one roof&quot; differentiator across the Flower Mound corridor, not foundational rebuilds.</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="pulse-dot" id="unread-pulse"></div>
+      <div class="stat-card__value" style="color: var(--metric-red);" id="unread-count">1</div>
+      <div class="stat-card__label">Unread Opportunities</div>
+      <div class="stat-card__subtitle">New plays to review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-green);">232</div>
+      <div class="stat-card__label">Credits Remaining</div>
+      <div class="stat-card__subtitle">Year 2 Allocation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-blue);">21.4</div>
+      <div class="stat-card__label">Million Data Points</div>
+      <div class="stat-card__subtitle">2 Markets + ASC, 14 Months</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-purple);">13</div>
+      <div class="stat-card__label">Next Strategy Session</div>
+      <div class="stat-card__subtitle">May 12, 2026</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+
+    <div class="col-left">
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">In Progress</span>
+          <span class="count-pill count-pill--blue">3</span>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-1">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Procedure Schema Layer Rollout</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">60%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 60%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-2">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Northlake/Argyle Geo-Page Build</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">75%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 75%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-3">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Spine Vertical Content Cluster</span>
+            <span class="play-item-ip__pct" style="color: var(--amber);">40%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 40%; background: var(--amber);"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">Opportunities</span>
+          <span class="count-pill count-pill--red" id="recommended-badge">1 new</span>
+        </div>
+
+        <div class="play-item selected" data-play-id="rec-1" id="play-rec-1">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">All-Under-One-Roof Authority Hub</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Competitive Intel</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">46 Credits</span>
+              <span class="badge badge--procedure">Authority Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item" data-play-id="rec-2" id="play-rec-2">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Procedure Page Build Out: 8 Cornerstone Pages</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">38 Credits</span>
+              <span class="badge badge--procedure">Procedure Hub Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-3" id="play-rec-3">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Hand Microsurgery Content Gap (Boyle/Dickson)</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">22 Credits</span>
+              <span class="badge badge--procedure">Niche Capture</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-4" id="play-rec-4">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">OINT Foot &amp; Ankle Ranking Movement</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Competitive Intel</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">20 Credits</span>
+              <span class="badge badge--procedure">Defensive Hold</span>
+            </div>
+          </div>
+        </div>
+
+        <span class="toggle-link" id="toggle-completed">Show 3 completed plays</span>
+
+        <div class="completed-section" id="completed-section">
+          <div class="play-item-completed" data-play-id="comp-1">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Q1 GBP Optimization: 2 Locations</span>
+            </div>
+            <div class="play-item-completed__outcome">+33% direction requests across both offices</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-2">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Award Schema Capture (Best of Denton County)</span>
+            </div>
+            <div class="play-item-completed__outcome">11 surgeon pages with full Award + Physician schema</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-3">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Flower Mound Corridor Competitive Landscape</span>
+            </div>
+            <div class="play-item-completed__outcome">12 competitors mapped (excluding All-Star sister practice)</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var ICON_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="#2db5b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.5"/><circle cx="15" cy="14" r="1.5"/><path d="M12 2v4"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>';
+    var ICON_RADAR = '<svg viewBox="0 0 24 24" fill="none" stroke="#4e9df7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>';
+    var ICON_AUDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#f7a600" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>';
+    var ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+    var ICON_LAUNCH_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1h6v6"/><path d="M13 1L6 8"/><path d="M11 8v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/></svg>';
+    var ICON_X_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3L3 11"/><path d="M3 3l8 8"/></svg>';
+    var ICON_GBP = '<svg viewBox="0 0 24 24" fill="none" stroke="#36d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    var ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef6a5e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    var ICON_CODE = '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>';
+
+    var PLAYS = {
+
+      "rec-1": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "All-Under-One-Roof Authority Hub",
+        query: 'productizing the OA differentiator (11 board-certified physicians + on-site imaging + open MRI + in-house PT + co-located #1-ranked THOSC ASC) into a flagship landing page no Flower Mound corridor competitor can match',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Orthopedic Associates owns the most defensible structural advantage in the Flower Mound corridor: <span class="hl-green">2 clinics</span>, on-site digital imaging, open MRI, in-house X-ray, PT, bracing, biologics, AND the co-located <span class="hl-green">Texas Health Orthopedic Surgery Center (THOSC)</span> at the 5000 Long Prairie HQ &mdash; ranked <span class="hl-green">#1 orthopedic ASC nationally</span> by Newsweek/Statista. Despite this, the OA site has <span class="hl-green">zero pages</span> articulating the integrated care story. The differentiator is mentioned in scattered location and About copy and lives nowhere AI engines or Google can lift it cleanly. Current AI Visibility on <span class="hl-green">"orthopedic surgeon Flower Mound TX"</span> sits at <span class="hl-green">64/100</span>, with <span class="hl-blue">Texas Health Physicians Group</span> and <span class="hl-blue">Baylor Scott &amp; White Orthopedics Flower Mound</span> picking up <span class="hl-green">8 of 12</span> tracked AI citations on integrated-care queries OA should own outright.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is the single most under-leveraged asset in the entire engagement. <span class="hl-blue">OINT</span> has 4 offices but no on-site ASC. <span class="hl-blue">BSW Flower Mound</span> has hospital scale but no #1-ranked outpatient ASC co-located on-site. <span class="hl-blue">Texas Health Physicians Group</span> has the system brand but lacks OA\'s 50-year corridor history (founded 1976) and surgeon density. None of them can match <span class="hl-green">11 board-certified physicians + Newsweek #1 ASC + same-day imaging-to-surgery workflow on one campus</span>. The AI citation gap exists because the practice has never published the story in a structured, schema-marked, AI-liftable format. Surgeon density (Evanich, Heerwagen, Cantrell, Dickson, Geisler, McElroy, Schrayer, Boyle, Singhal) gives the page depth competitors literally cannot copy without acquiring physicians.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a flagship "Integrated Orthopedic Care" authority hub (2,000+ words) leading with the THOSC #1 national ranking, anchored by all 11 board-certified physicians, with patient-journey storytelling (consult &rarr; same-campus MRI &rarr; same-campus surgery &rarr; same-campus PT) and full <span class="hl-green">MedicalOrganization + Award + MedicalProcedure</span> schema. Pair with a <span class="hl-green">5-outlet digital PR push</span> (Cross Timbers Gazette, Dallas Business Journal, Denton Record-Chronicle, D Magazine, Becker\'s ASC Review) anchoring the Newsweek ranking. Forecasted: recover <span class="hl-green">7-9 of the 12 displaced AI citations</span> within 60-75 days and capture position #1-2 for "orthopedic surgeon Flower Mound TX" plus 6 related corridor authority queries.'
+          }
+        ],
+        procedure: {
+          title: "Authority Build",
+          bullets: [
+            { bold: "Flagship Hub Page:", text: "Dedicated 2,000+ word landing page leading with THOSC #1 national ranking, full surgeon roster (Evanich, Heerwagen, Cantrell, Dickson, Geisler, McElroy, Schrayer, Boyle, Singhal), same-campus patient journey, and MedicalOrganization + Award + MedicalProcedure schema." },
+            { bold: "Digital PR Push:", text: "Coordinated outreach to 5 outlets (Cross Timbers Gazette monthly column tie-in, Dallas Business Journal, Denton Record-Chronicle, D Magazine, Becker's ASC Review) anchored on the Newsweek/Statista #1 ranking and OA's 1976 corridor anchor history." },
+            { bold: "Schema &amp; AI Lift:", text: "Restructure homepage and About-page copy to expose the integrated-care entity in physician-attributed Q&amp;A blocks. Add Award schema to all 11 surgeon pages where applicable (Best of Flower Mound, Best of Denton County)." },
+            { bold: "Validation:", text: "Daily AI Overview citation tracking across 12 corridor authority queries plus 9 long-tail integrated-care terms for 75 days post-deployment." }
+          ],
+          cost: "46 Credits"
+        }
+      },
+
+      "rec-2": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Procedure Page Build Out: 8 Cornerstone Pages",
+        query: 'content depth audit identifying 8 high-volume commercial-intent procedure queries where OA has surgical depth but no dedicated standalone procedure page',
+        sections: [
+          {
+            label: "The Data",
+            body: 'OA has <span class="hl-green">11 board-certified physicians</span> covering joint replacement, sports medicine, spine, hand/wrist, foot/ankle, shoulder/elbow, trauma, and microsurgery &mdash; but only <span class="hl-green">3 dedicated procedure pages</span> across the full clinical footprint. Search demand on the 8 highest-priority commercial-intent queries (knee replacement Flower Mound, hip replacement Highland Village, ACL reconstruction, rotator cuff repair, carpal tunnel release, lumbar fusion, plantar fasciitis surgery, total shoulder replacement) averages <span class="hl-green">+29% YoY growth</span>. Top-ranking pages on these queries average <span class="hl-green">1,650-2,100 words</span> with FAQ schema, recovery timelines, and surgeon attribution. <span class="hl-blue">OINT</span> currently outranks OA for "carpal tunnel Denton County" and "foot ankle surgeon Flower Mound." <span class="hl-blue">BSW Flower Mound</span> outranks OA for "knee replacement Flower Mound" despite OA performing higher procedure volume on the same campus.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'OA has the cleanest procedure-page content gap of any practice in the corridor relative to surgical capability. The surgeons exist (Evanich and Heerwagen on hip/knee, Cantrell on sports med, Dickson and Boyle on hand, Geisler and McElroy on spine, Schrayer on trauma), the volume exists, the THOSC ASC sits 50 feet from the clinic, and yet the website is publishing roughly one-fifth the procedure content of the practices winning these queries. The bottleneck is publishing infrastructure, not surgical or clinical authority. This is the single highest-ROI content investment available in Year 2.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build 8 cornerstone procedure pages (1,500-1,800 words each) anchored to the appropriate surgeon: knee replacement (Evanich, Heerwagen), hip replacement (Evanich, Heerwagen), ACL reconstruction (Cantrell), rotator cuff repair (Cantrell, Dickson), carpal tunnel release (Boyle, Dickson), lumbar fusion (Geisler, McElroy), plantar fasciitis surgery (foot/ankle bench), total shoulder replacement (Dickson, Cantrell). Each page deploys <span class="hl-green">MedicalProcedure + FAQPage + Physician schema</span>, candidacy criteria, recovery timelines, and the THOSC same-campus narrative. Forecasted: <span class="hl-green">+540 monthly organic visits</span> at maturity across the 8-page cluster, with strong commercial-intent conversion driven by elective procedure search behavior.'
+          }
+        ],
+        procedure: {
+          title: "Procedure Hub Build",
+          bullets: [
+            { bold: "Cornerstone Production:", text: "8 procedure pages at 1,500-1,800 words each: knee replacement, hip replacement, ACL reconstruction, rotator cuff repair, carpal tunnel release, lumbar fusion, plantar fasciitis surgery, total shoulder replacement." },
+            { bold: "Surgeon Attribution:", text: "Each page bylined to the appropriate physician (Evanich/Heerwagen on joints, Cantrell on sports med, Boyle/Dickson on hand, Geisler/McElroy on spine, Schrayer on trauma) with full Physician schema." },
+            { bold: "ASC Integration:", text: "Every page weaves the THOSC #1 national ASC ranking into the candidacy and same-day-surgery sections." },
+            { bold: "Geo Variants:", text: "Light geo-variants for Flower Mound, Highland Village, Argyle, Northlake, Lewisville, Lantana, and Denton on the 4 highest-volume procedures." },
+            { bold: "Schema Deployment:", text: "MedicalProcedure + FAQPage + Physician schema on all 8 pages, validated via Rich Results Test before launch." }
+          ],
+          cost: "38 Credits"
+        }
+      },
+
+      "rec-3": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Hand Microsurgery Content Gap (Boyle/Dickson)",
+        query: 'content depth audit for hand microsurgery, upper extremity microsurgery, and reconstructive nerve work &mdash; a defensible niche where Boyle and Dickson have credentials and no corridor competitor has comparable bench depth',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Dr. <span class="hl-green">Jonathan Boyle</span> is fellowship-trained in hand, upper extremity, and microsurgery. Dr. <span class="hl-green">Kent Dickson</span> brings 20+ years of shoulder/hand/wrist/elbow expertise alongside Boyle. Together they form the strongest hand-microsurgery bench in the Flower Mound corridor &mdash; but OA has <span class="hl-green">zero pages</span> dedicated to microsurgery, nerve repair, or complex upper-extremity reconstruction. Search volume on these terms is modest (~<span class="hl-green">280 monthly searches across the cluster</span>) but commercial intent is exceptionally high and competition is essentially absent: <span class="hl-blue">OINT</span> has hand surgeons but no microsurgery focus, <span class="hl-blue">BSW</span> handles complex hand work through DFW system referrals, and no other corridor practice publishes microsurgery content at all.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Microsurgery is the textbook defensible niche: low search volume, high revenue per case, near-zero corridor competition, and a credentialed bench OA already employs. The model flagged this as a Medium priority rather than Critical because volume is small, but it\'s the highest <span class="hl-green">defensibility-per-dollar</span> play in the recommendation set. Once OA owns this content vertical, no corridor competitor will displace it without acquiring microsurgery-trained surgeons. This pairs strategically with the carpal tunnel page in rec-2 and reinforces the Boyle/Dickson hand surgery brand.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a 4-page microsurgery cluster: cornerstone "Hand &amp; Upper Extremity Microsurgery" page (1,400 words, Boyle + Dickson bylined, MedicalProcedure schema), plus 3 supporting articles (nerve repair and reconstruction, complex finger and tendon repair, microsurgical revascularization candidacy). Cross-link to carpal tunnel and shoulder pages from rec-2. Forecasted: <span class="hl-green">+85 monthly organic visits</span> at maturity but with <span class="hl-green">2-3x conversion rate</span> versus general procedure traffic given high commercial intent and limited alternatives.'
+          }
+        ],
+        procedure: {
+          title: "Niche Capture",
+          bullets: [
+            { bold: "Cornerstone Page:", text: "Hand &amp; Upper Extremity Microsurgery page (1,400 words) with Boyle + Dickson attribution, candidacy criteria, microsurgical case-mix overview, and full MedicalProcedure schema." },
+            { bold: "Supporting Cluster:", text: "3 articles: nerve repair and reconstruction, complex finger/tendon repair, microsurgical revascularization candidacy." },
+            { bold: "Cross-Linking:", text: "Internal links to carpal tunnel release page, shoulder pages, and Boyle/Dickson surgeon profiles. Establish topical authority cluster around hand and upper extremity." },
+            { bold: "Tracking:", text: "60-day SERP monitoring on 14 microsurgery-cluster terms plus referral attribution from the hand/upper extremity category." }
+          ],
+          cost: "22 Credits"
+        }
+      },
+
+      "rec-4": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "OINT Foot & Ankle Ranking Movement",
+        query: 'ranking movement for "foot and ankle surgeon Flower Mound" and 5 related foot/ankle queries where OINT has gained 2-4 positions in the past 45 days',
+        sections: [
+          {
+            label: "The Data",
+            body: '<span class="hl-blue">Orthopedic Institute of North Texas (OINT)</span> has moved from positions <span class="hl-green">#5-6 to #2-3</span> across <span class="hl-green">5 foot/ankle queries</span> over the past 45 days, including "foot and ankle surgeon Flower Mound," "plantar fasciitis Highland Village," and "bunion surgery Denton County." OINT published a refreshed foot/ankle hub plus 4 supporting articles in March, picked up <span class="hl-green">3 referring domains</span> from regional health publications, and has begun appearing in Google AI Overviews on 2 foot/ankle queries OA previously held citations on.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'OINT is making a deliberate, well-executed push on foot and ankle. Their content investment is real and their authority signals are strengthening. OA\'s foot/ankle bench is competitive but the page-level content has not been refreshed in 14 months and lacks the surgeon-attributed FAQ structure OINT now has. This is a defensive hold play: not because OINT is structurally winning (they have no on-site ASC and a smaller surgeon roster), but because the SERP on foot/ankle has become contested and a 90-day content gap will compound. The fix is targeted, not foundational.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Refresh OA\'s foot &amp; ankle hub plus add 2 supporting articles (recovery from foot/ankle surgery week-by-week, plantar fasciitis non-surgical to surgical decision tree) tied to the THOSC same-campus narrative and full surgeon attribution. Forecasted: defend <span class="hl-green">3-4 of the 5 contested queries</span> within 60 days and prevent further OINT advancement. Pairs with the plantar fasciitis page in rec-2; can be sequenced to share content production effort.'
+          }
+        ],
+        procedure: {
+          title: "Defensive Hold",
+          bullets: [
+            { bold: "Hub Refresh:", text: "Rewrite OA's foot &amp; ankle landing page with surgeon attribution, candidacy and recovery sections, FAQ schema targeting the 5 queries OINT is gaining on, and THOSC same-campus narrative." },
+            { bold: "Supporting Articles:", text: "2 articles (foot/ankle surgery week-by-week recovery, plantar fasciitis non-surgical to surgical decision tree) interlinked with the hub." },
+            { bold: "Local Reinforcement:", text: "GBP posts and Q&amp;A seeding across Flower Mound and Northlake/Argyle profiles to support local-pack visibility on contested foot/ankle terms." },
+            { bold: "Tracking:", text: "Daily SERP monitoring on the 5 affected queries plus 7 long-tail variants for 75 days." }
+          ],
+          cost: "20 Credits"
+        }
+      },
+
+      "ip-1": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Procedure Schema Layer Rollout",
+        progress: 60,
+        query: "MedicalProcedure + FAQPage schema deployment across the 23 OA procedure and condition pages",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (architecture) and Phase 2 (high-priority page deployment) are complete. <span class="hl-green">14 of 23 procedure pages</span> now have full MedicalProcedure + FAQPage schema deployed including hip replacement, knee replacement, ACL reconstruction, rotator cuff repair, and the joint replacement umbrella page. Average entity count per page has moved from <span class="hl-green">1.2</span> to <span class="hl-green">7.6</span>. Rich result eligibility confirmed in Search Console for all 14 deployed pages.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Early performance from the first 14 pages is tracking ahead of forecast. Average <span class="hl-green">+24% impressions</span> and <span class="hl-blue">+18% click-through</span> across the deployed set in the 30 days following each page\'s schema deployment. The hip and knee replacement pages (Evanich + Heerwagen) gained AI Overview citations on "hip replacement Highland Village" and "knee replacement Flower Mound" within 22 days. Schema also exposes the THOSC #1 national ASC entity on every joint replacement procedure page, feeding directly into the All-Under-One-Roof authority play (rec-1).'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Remaining 9 pages (foot &amp; ankle conditions, hand/wrist procedures, spine procedures) are scoped and queued for deployment over the next 4 weeks. Once complete, OA will have full structured data coverage across the procedure library, positioning the site for sustained AI Overview citation gains. The remaining spine pages also unblock the Spine Vertical Content Cluster (ip-3) for schema-aware page rewrites.'
+          }
+        ],
+        procedure: {
+          title: "Procedure Schema Layer Rollout",
+          bullets: [
+            { bold: "Completed:", text: "Schema architecture, deployment on 14 of 23 procedure pages including hip/knee replacement and ACL/rotator cuff, Search Console validation" },
+            { bold: "In Progress:", text: "Foot &amp; ankle conditions, hand/wrist procedures, spine procedures (60% overall)" },
+            { bold: "Next:", text: "Final 9 pages deployed, AI Overview citation tracking activated, expansion into condition pages and surgeon profiles in Q3" }
+          ],
+          cost: "32 Credits (allocated)"
+        }
+      },
+
+      "ip-2": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Northlake/Argyle Geo-Page Build",
+        progress: 75,
+        query: "geo-targeted landing page build for the Northlake/Argyle office (1234 FM 407, opened 2021) and the surrounding affluent corridor",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (keyword research and content briefs) is complete. Mapped <span class="hl-green">16 high-intent procedure-by-city queries</span> across the Northlake, Argyle, Justin, and Lantana markets where OA currently has either no dedicated page or a thin location-only stub. Phase 2 (page production) is well advanced: <span class="hl-green">12 of 16</span> pages drafted, 8 in physician review, 4 still in queue. Initial deployments target "orthopedic surgeon Argyle TX," "knee replacement Northlake," "sports medicine Argyle," and "hand surgeon Lantana."'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'The Northlake/Argyle office (opened 2021) has been the practice\'s growth lever for two years but has thin geo-targeted SEO support compared to the Flower Mound HQ. Competitive density in this corridor is unusually low: <span class="hl-blue">OINT</span> has no Argyle-specific pages, <span class="hl-blue">BSW Flower Mound</span> doesn\'t target this geography, and <span class="hl-blue">Texas Health Physicians Group</span> has only generic system pages. OA\'s 11-physician roster and same-campus THOSC ASC are dramatically over-credentialed for this competitive set, and the model is forecasting strong organic capture once page deployment completes.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Full deployment expected in 2 weeks. Forecasted <span class="hl-green">+390 monthly organic visits</span> across the four cities at maturity. Will reinforce local pack performance for the Northlake/Argyle office and feed conversion volume into the procedure pages built under rec-2 once those go live. Each geo-page is structured to internally link to the correct surgeon (Cantrell on sports med, Heerwagen on knee, Boyle on hand) and the THOSC same-campus story.'
+          }
+        ],
+        procedure: {
+          title: "Northlake/Argyle Geo-Page Build",
+          bullets: [
+            { bold: "Completed:", text: "Keyword research, content briefs, 12 of 16 pages drafted with surgeon attribution and geo-specific copy" },
+            { bold: "In Progress:", text: "Physician review for 8 pages, production for remaining 4 (75% overall)" },
+            { bold: "Next:", text: "Complete drafts, deploy with full LocalBusiness + Physician schema, 60-day SERP monitoring across the 16 priority queries" }
+          ],
+          cost: "24 Credits (allocated)"
+        }
+      },
+
+      "ip-3": {
+        source: "SEO Strategy",
+        sourceIcon: ICON_AUDIT,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Spine Vertical Content Cluster",
+        progress: 40,
+        query: "content cluster build for the underleveraged Geisler/McElroy spine duo across lumbar, cervical, and minimally invasive spine procedures",
+        sections: [
+          {
+            label: "The Data",
+            body: 'OA has two credentialed spine surgeons &mdash; Dr. <span class="hl-green">Brady G. Geisler</span> (spine) and Dr. <span class="hl-green">James C. McElroy</span> (neck/back) &mdash; but spine content on the OA site totals <span class="hl-green">3 thin pages</span> (~410 average words) with no FAQ schema and minimal surgeon attribution. Search demand on "spine surgeon Lewisville" and "lumbar fusion Flower Mound" runs <span class="hl-green">+24% YoY</span>. Phase 1 (content strategy and surgeon interview content capture) is complete. Phase 2 (page production) is in progress: <span class="hl-green">3 of 7</span> planned pages drafted, 1 in physician review, 4 still in queue.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Spine is OA\'s most underleveraged surgical vertical relative to capability. Geisler and McElroy run a credentialed spine practice and operate at the JCAHO-monitored THOSC ASC, but the website doesn\'t reflect either their depth or the ASC integration. Currently <span class="hl-blue">BSW Flower Mound</span> outranks OA for "spine surgeon Flower Mound" purely on page-level content depth, not on surgical authority. The play is amber rather than green because page production is dependent on physician interview availability, which has slowed during peak surgical season &mdash; the schedule risk is real but the underlying opportunity is large.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a 7-page spine cluster: spine umbrella refresh, cornerstone lumbar fusion page, cornerstone cervical fusion page, minimally invasive spine page, plus 3 condition-focused supporting articles (sciatica, spinal stenosis, herniated disc). All bylined to Geisler and/or McElroy with full <span class="hl-green">MedicalProcedure + Physician schema</span> and the THOSC same-campus narrative. Forecasted: <span class="hl-green">+260 monthly organic visits</span> at maturity once all 7 pages are live. Completion currently scheduled for end of Q2.'
+          }
+        ],
+        procedure: {
+          title: "Spine Vertical Content Cluster",
+          bullets: [
+            { bold: "Completed:", text: "Content strategy, Geisler/McElroy interview capture, 3 of 7 pages drafted" },
+            { bold: "In Progress:", text: "Physician review for 1 page, production for remaining 4 (40% overall)" },
+            { bold: "Next:", text: "Unblock physician review cadence, complete drafts, deploy with full schema in coordination with ip-1 (schema rollout)" }
+          ],
+          cost: "26 Credits (allocated)"
+        }
+      },
+
+      "comp-1": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Q1 GBP Optimization: 2 Locations",
+        query: "Google Business Profile refresh across the Flower Mound HQ (5000 Long Prairie Rd) and Northlake/Argyle (1234 FM 407) office",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed both OA Google Business Profiles in February-March: corrected primary categories, expanded service descriptions to surface all 11 surgeons by sub-specialty, deployed photo updates from a coordinated practice shoot covering both clinics and the THOSC ASC, refreshed Q&amp;A seeding, and added structured posts surfacing the Newsweek/Statista #1 ASC ranking and Best of Flower Mound award.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Across both locations: <span class="hl-green">+33% direction requests</span>, <span class="hl-blue">+27% profile views</span>, and <span class="hl-green">+18% calls</span> in the 60 days post-deployment. Strongest lift in <span class="hl-blue">Northlake/Argyle (+44%)</span>, where prior GBP content had been thinnest given the office\'s 2021 opening. <span class="hl-blue">Flower Mound HQ</span> saw smaller percentage gains but the largest absolute volume increase given its 2010 anchor presence and corridor brand recognition. Surfacing the THOSC #1 national ranking on the Flower Mound profile description correlated with a measurable bump on integrated-care queries.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'GBP optimization is now integrated into OA\'s ongoing care. Weekly post schedule, monthly review response cadence, and quarterly photo refreshes are standardized. Cross Timbers Gazette monthly columns are now pulled into GBP posts to extend their organic reach. Next refresh cycle scheduled for July 2026.'
+          }
+        ],
+        procedure: {
+          title: "Q1 GBP Optimization: 2 Locations",
+          bullets: [
+            { bold: "Completed:", text: "Both profiles fully refreshed with categories, descriptions, photos, Q&amp;A; THOSC #1 national ranking surfaced on Flower Mound HQ profile" },
+            { bold: "Result:", text: "+33% direction requests, +27% profile views, +18% calls across both offices" },
+            { bold: "Status:", text: "Ongoing maintenance integrated, Cross Timbers Gazette content pulled into GBP posts, next refresh July 2026" }
+          ],
+          cost: "12 Credits (spent)"
+        }
+      },
+
+      "comp-2": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Award Schema Capture (Best of Denton County)",
+        query: "Award schema and Physician schema deployment surfacing the Best of Flower Mound, Best of Denton County, and 2025 Readers' Choice recognitions across surgeon pages",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Deployed <span class="hl-green">Award schema + Physician schema</span> across all <span class="hl-green">11 surgeon pages</span> in February. Captured awards include Dr. <span class="hl-green">J. David Evanich</span>\'s "Best of Flower Mound," Dr. <span class="hl-green">James Heerwagen</span>\'s multi-year Best of Denton County recognition, the practice-level 2025 Readers\' Choice award, and "Best Orthopedic Surgeon of Flower Mound." Pages now expose 5-8 structured entities each, up from a baseline average of 1-2.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Award schema is a textbook E-E-A-T trust signal that AI engines and Google\'s ranking systems explicitly reward. Pre-deployment, OA\'s award history was buried in About-page text and PR mentions where neither AI engines nor structured search could lift it. Within 35 days of schema deployment, <span class="hl-green">5 surgeons</span> gained Knowledge Panel eligibility on branded surgeon-name searches; Evanich and Heerwagen\'s pages began surfacing in AI Overview responses for "best orthopedic surgeon Flower Mound" and "best knee surgeon Denton County." E-E-A-T density measured by the model has moved from <span class="hl-green">38/100</span> to <span class="hl-green">71/100</span> across the surgeon roster.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'This work is the foundation for the All-Under-One-Roof Authority Hub (rec-1) and feeds award attribution into every procedure-page schema deployment going forward. Pattern is now standardized so future awards (mid-year recognitions, new Best Of cycles) are deployed within 7 days of announcement.'
+          }
+        ],
+        procedure: {
+          title: "Award Schema Capture (Best of Denton County)",
+          bullets: [
+            { bold: "Completed:", text: "All 11 surgeon pages with Award + Physician schema; Best of Flower Mound, Best of Denton County, 2025 Readers' Choice all surfaced" },
+            { bold: "Result:", text: "5 surgeons newly Knowledge Panel eligible, E-E-A-T density 38->71 on the model's roster score" },
+            { bold: "Status:", text: "Standardized pattern; future awards deployed within 7 days of announcement" }
+          ],
+          cost: "13 Credits (spent)"
+        }
+      },
+
+      "comp-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Flower Mound Corridor Competitive Landscape",
+        query: "competitor identification and tracking refresh for the Flower Mound, Highland Village, Argyle, Northlake, Lewisville, and Denton corridor",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed OA\'s competitive tracking set for 2026: <span class="hl-green">12 corridor competitors</span> profiled (up from 8 in 2025) with current location count, surgeon roster, schema implementation, blog cadence, paid search activity, and estimated organic traffic. Full ranking baselines refreshed across <span class="hl-green">2,140 keywords</span>. Tracked set includes <span class="hl-blue">OINT (Orthopedic Institute of North Texas)</span>, <span class="hl-blue">Texas Health Physicians Group</span>, <span class="hl-blue">Baylor Scott &amp; White Orthopedics Flower Mound</span>, and 9 corridor and DFW-adjacent practices. <span class="hl-green">All-Star Orthopaedics excluded</span> from the tracked set as a UMP sister practice.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Most consequential 2026 findings: <span class="hl-blue">OINT</span> is making a deliberate foot/ankle and shoulder/hand investment that drove the rec-4 defensive hold play. <span class="hl-blue">BSW Flower Mound</span> consolidated their orthopedic service pages into a single optimized hub late 2025 and now outranks OA on several joint replacement queries despite OA\'s on-campus THOSC ASC advantage. <span class="hl-blue">Texas Health Physicians Group</span> leans on system brand authority but publishes thin practice-level content. The All-Under-One-Roof play (rec-1) and Procedure Page Build Out (rec-2) are direct outputs of this refreshed view.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Refreshed tracking is now feeding the AI model continuously. Three of the four current opportunity plays (rec-1, rec-2, rec-4) are direct outputs of the refreshed competitive view. Tracking will refresh again at end of Q3 to capture OINT\'s response to OA\'s expected Q2 content push.'
+          }
+        ],
+        procedure: {
+          title: "Flower Mound Corridor Competitive Landscape",
+          bullets: [
+            { bold: "Completed:", text: "12 competitors profiled including OINT, BSW Flower Mound, Texas Health Physicians Group; 2,140 keywords baselined; All-Star Orthopaedics excluded as UMP sister practice" },
+            { bold: "Result:", text: "3 active opportunity plays generated from the refreshed competitive view" },
+            { bold: "Status:", text: "Continuous monitoring active; next full refresh at end of Q3" }
+          ],
+          cost: "10 Credits (spent)"
+        }
+      }
+    };
+
+    function renderDetail(playId) {
+      var play = PLAYS[playId];
+      if (!play) {
+        document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">Select a play to view details</div>';
+        return;
+      }
+      var sectionsHtml = play.sections.map(function(s) {
+        return '<div class="detail-section">' +
+          '<div class="detail-section__label">' + s.label + '</div>' +
+          '<div class="detail-section__body">' + s.body + '</div>' +
+        '</div>';
+      }).join('');
+      var bulletsHtml = play.procedure.bullets.map(function(b) {
+        return '<li><strong>' + b.bold + '</strong> ' + b.text + '</li>';
+      }).join('');
+      var isCompleted = playId.startsWith('comp-');
+      var isInProgress = playId.startsWith('ip-');
+      var progressHtml = '';
+      if (isInProgress) {
+        var pct = play.progress || 0;
+        var barColor = pct >= 60 ? 'var(--metric-green)' : 'var(--amber)';
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: ' + pct + '%; background: ' + barColor + ';"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: ' + barColor + ';">' + pct + '% Complete</div>' +
+          '</div>';
+      } else if (isCompleted) {
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: 100%; background: var(--metric-green);"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: var(--metric-green);">100% Complete</div>' +
+          '</div>';
+      }
+      var procedureHtml =
+        '<div class="procedure-block">' +
+          '<div class="procedure-block__header">' +
+            '<div class="procedure-block__icon">' + ICON_ROCKET + '</div>' +
+            '<span class="procedure-block__label">Recommended Strategic Play</span>' +
+          '</div>' +
+          '<div class="procedure-block__title">' + play.procedure.title + '</div>' +
+          '<ul class="procedure-block__list">' + bulletsHtml + '</ul>' +
+          '<div class="procedure-block__cost">Cost: ' + play.procedure.cost + '</div>' +
+          (!(isInProgress || isCompleted) ?
+            '<div class="procedure-block__actions">' +
+              '<button class="btn btn--primary" onclick="handleLaunch(\'' + playId + '\')">' + ICON_LAUNCH_SM + ' Launch Play</button>' +
+              '<button class="btn btn--ghost" onclick="handleDismiss(\'' + playId + '\')">' + ICON_X_SM + ' Dismiss</button>' +
+            '</div>' +
+            '<div id="demo-notice-area"></div>'
+          : '') +
+        '</div>';
+      var bottomHtml = (isInProgress || isCompleted) ? procedureHtml + progressHtml : procedureHtml;
+      var html =
+        '<div class="detail-header">' +
+          '<div class="detail-header__icon">' + play.sourceIcon + '</div>' +
+          '<span class="detail-header__source">' + play.source + '</span>' +
+          '<span class="badge ' + play.priorityClass + ' detail-header__priority">' + (isCompleted || isInProgress ? '' : 'Priority: ') + play.priority + '</span>' +
+        '</div>' +
+        '<div class="detail-title">' + play.title + '</div>' +
+        '<div class="detail-query-box">' + play.query + '</div>' +
+        sectionsHtml + bottomHtml;
+      document.getElementById('detail-panel').innerHTML = html;
+    }
+
+    var currentSelected = 'rec-1';
+    var unreadCount = 1;
+
+    function selectPlay(playId, element) {
+      document.querySelectorAll('.play-item.selected, .play-item-ip.selected, .play-item-completed.selected').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      if (element.classList.contains('play-item') && !element.classList.contains('read')) {
+        element.classList.add('read');
+        unreadCount = Math.max(0, unreadCount - 1);
+        document.getElementById('unread-count').textContent = unreadCount;
+        if (unreadCount > 0) {
+          document.getElementById('recommended-badge').textContent = unreadCount + ' new';
+        } else {
+          document.getElementById('recommended-badge').textContent = '0 new';
+          var pulse = document.getElementById('unread-pulse');
+          if (pulse) pulse.style.display = 'none';
+        }
+      }
+      currentSelected = playId;
+      renderDetail(playId);
+    }
+
+    document.querySelectorAll('.play-item').forEach(function(el) {
+      el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+    });
+    document.querySelectorAll('.play-item-ip').forEach(function(el) {
+      el.addEventListener('click', function() {
+        document.querySelectorAll('.play-item.selected, .play-item-completed.selected, .play-item-ip.selected').forEach(function(s) {
+          s.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        currentSelected = el.dataset.playId;
+        renderDetail(el.dataset.playId);
+      });
+    });
+    function bindCompletedPlays() {
+      document.querySelectorAll('.play-item-completed').forEach(function(el) {
+        if (el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+      });
+    }
+    var toggleLink = document.getElementById('toggle-completed');
+    var completedSection = document.getElementById('completed-section');
+    var completedVisible = false;
+    toggleLink.addEventListener('click', function() {
+      completedVisible = !completedVisible;
+      if (completedVisible) {
+        completedSection.classList.add('visible');
+        toggleLink.textContent = 'Hide completed plays';
+        bindCompletedPlays();
+      } else {
+        completedSection.classList.remove('visible');
+        toggleLink.textContent = 'Show 3 completed plays';
+      }
+    });
+
+    function showDemoNotice(message) {
+      var area = document.getElementById('demo-notice-area');
+      if (!area) return;
+      var existing = area.querySelector('.demo-notice');
+      if (existing) existing.remove();
+      var notice = document.createElement('div');
+      notice.className = 'demo-notice';
+      notice.textContent = message;
+      area.appendChild(notice);
+    }
+    function handleLaunch(playId) {
+      showDemoNotice('This is a demo. In the live platform, this would launch the play and deduct credits from your balance.');
+    }
+    function handleDismiss(playId) {
+      showDemoNotice('This is a demo. In the live platform, this play would be dismissed and moved to your archive.');
+    }
+
+    renderDetail('rec-1');
+  </script>
+</body>
+</html>

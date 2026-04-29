@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategic Plays Dashboard | Panorama Orthopedics &amp; Spine Center</title>
+
+  <!-- Google Fonts: Roboto 400, 500 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-page: #0e1520;
+      --bg-card: #1a2838;
+      --border: #283848;
+      --border-selected: #4e9df7;
+      --text-muted: #6b7a8d;
+      --text-body: #8a99ab;
+      --metric-red: #ef6a5e;
+      --metric-green: #36d399;
+      --metric-blue: #4e9df7;
+      --metric-purple: #8b5cf6;
+      --amber: #f7a600;
+      --btn-primary: #00529b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: auto; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-page); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-page); }
+    body { background: var(--bg-page); color: #e2e8f0; font-family: 'Roboto', sans-serif; font-weight: 400; font-size: 14px; line-height: 1.5; padding: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px 16px; text-align: center; position: relative; }
+    .stat-card__value { font-size: 52px; font-weight: 500; line-height: 1.1; margin-bottom: 4px; }
+    .stat-card__label { font-size: 16px; font-weight: 500; color: #e2e8f0; margin-bottom: 2px; }
+    .stat-card__subtitle { font-size: 13px; color: var(--text-muted); }
+    .pulse-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--metric-red); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 106, 94, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(239, 106, 94, 0); } }
+    .dashboard { display: flex; gap: 24px; align-items: flex-start; }
+    .col-left { width: 40%; min-width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 24px; }
+    .col-right { flex: 1; min-width: 0; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-header__title { font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+    .count-pill { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 12px; line-height: 1.4; }
+    .count-pill--blue { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .count-pill--red { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .play-item-ip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .play-item-ip:hover { border-color: var(--text-muted); }
+    .play-item-ip.selected { border-color: var(--border-selected); }
+    .play-item-ip__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .play-item-ip__title { font-size: 14px; font-weight: 500; color: #e2e8f0; }
+    .play-item-ip__pct { font-size: 13px; font-weight: 500; }
+    .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .progress-bar__fill { height: 100%; border-radius: 2px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    .play-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+    .play-item:hover { border-color: var(--text-muted); }
+    .play-item.selected { border-color: var(--border-selected); }
+    .play-item.read .play-item__title { color: var(--text-body); }
+    .play-item__unread-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--metric-red); }
+    .play-item.read .play-item__unread-dot { display: none; }
+    .play-item__title { font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 6px; padding-right: 20px; }
+    .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge--source { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .badge--critical { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .badge--medium { background: rgba(247, 166, 0, 0.12); color: var(--amber); }
+    .badge--credits { background: rgba(54, 211, 153, 0.12); color: var(--metric-green); }
+    .badge--procedure { background: rgba(139, 92, 246, 0.12); color: var(--metric-purple); }
+    .toggle-link { display: inline-block; font-size: 13px; color: var(--metric-blue); cursor: pointer; margin-top: 4px; user-select: none; }
+    .toggle-link:hover { text-decoration: underline; }
+    .completed-section { display: none; margin-top: 12px; }
+    .completed-section.visible { display: block; }
+    .play-item-completed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; opacity: 0.6; transition: opacity 0.15s, border-color 0.15s; position: relative; }
+    .play-item-completed:hover { opacity: 0.85; border-color: var(--text-muted); }
+    .play-item-completed.selected { border-color: var(--border-selected); opacity: 0.85; }
+    .play-item-completed__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .play-item-completed__check { color: var(--metric-green); font-size: 14px; flex-shrink: 0; }
+    .play-item-completed__title { font-size: 14px; font-weight: 500; color: var(--text-body); }
+    .play-item-completed__outcome { font-size: 12px; color: var(--metric-green); margin-left: 22px; }
+    .detail-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+    .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .detail-header__icon { width: 28px; height: 28px; flex-shrink: 0; }
+    .detail-header__source { font-size: 13px; font-weight: 500; color: var(--text-body); }
+    .detail-header__priority { margin-left: auto; }
+    .detail-title { font-size: 20px; font-weight: 500; color: #e2e8f0; margin-bottom: 16px; }
+    .detail-query-box { background: var(--bg-page); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-body); margin-bottom: 20px; font-style: italic; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-section__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #e2e8f0; margin-bottom: 6px; }
+    .detail-section__body { font-size: 14px; color: var(--text-body); line-height: 1.6; }
+    .hl-green { background: rgba(54, 211, 153, 0.1); color: var(--metric-green); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .hl-blue { background: rgba(78, 157, 247, 0.1); color: var(--metric-blue); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .procedure-block { background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .procedure-block__header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .procedure-block__icon { width: 22px; height: 22px; flex-shrink: 0; }
+    .procedure-block__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .procedure-block__title { font-size: 18px; font-weight: 500; color: #e2e8f0; margin-bottom: 14px; }
+    .procedure-block__list { list-style: none; margin-bottom: 14px; }
+    .procedure-block__list li { font-size: 13px; color: var(--text-body); line-height: 1.7; padding-left: 16px; position: relative; }
+    .procedure-block__list li::before { content: "•"; position: absolute; left: 0; color: var(--text-muted); }
+    .procedure-block__list li strong { color: #e2e8f0; font-weight: 500; }
+    .procedure-block__cost { font-size: 14px; font-weight: 500; color: var(--metric-green); margin-bottom: 16px; }
+    .procedure-block__actions { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; font-family: 'Roboto', sans-serif; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn--primary { background: var(--btn-primary); color: #ffffff; }
+    .btn--ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .detail-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+    .demo-banner { background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.25); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .demo-banner__icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--amber); }
+    .demo-banner__content { flex: 1; }
+    .demo-banner__title { font-size: 14px; font-weight: 500; color: var(--amber); margin-bottom: 4px; }
+    .demo-banner__text { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+    .demo-notice { margin-top: 12px; padding: 10px 14px; background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.2); border-radius: 6px; font-size: 12px; color: var(--amber); line-height: 1.5; animation: fadeInNotice 0.3s ease; }
+    @keyframes fadeInNotice { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .play-item__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .play-item__meta-left { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .play-item__meta-right { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+    .detail-progress { margin-top: 24px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .detail-progress__label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+    .detail-progress__bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .detail-progress__fill { height: 100%; border-radius: 4px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    @keyframes fillBar { from { width: 0; } }
+    .detail-progress__pct { font-size: 14px; font-weight: 500; text-align: right; }
+  </style>
+</head>
+<body>
+
+  <div class="demo-banner">
+    <div class="demo-banner__icon">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+    </div>
+    <div class="demo-banner__content">
+      <div class="demo-banner__title">Demo Mode Active</div>
+      <div class="demo-banner__text">This is a demonstration of the Patient Genius platform built using Panorama Orthopedics &amp; Spine Center's market data. Strategic plays, competitor analysis, and recommendations shown here are illustrative of how the system surfaces opportunities mid-engagement. Year-two plays focus on extending wins from year one and capitalizing on Panorama's flagship position in the Denver metro market.</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="pulse-dot" id="unread-pulse"></div>
+      <div class="stat-card__value" style="color: var(--metric-red);" id="unread-count">2</div>
+      <div class="stat-card__label">Unread Opportunities</div>
+      <div class="stat-card__subtitle">New plays to review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-green);">312</div>
+      <div class="stat-card__label">Credits Remaining</div>
+      <div class="stat-card__subtitle">Year 2 Allocation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-blue);">187.5</div>
+      <div class="stat-card__label">Million Data Points</div>
+      <div class="stat-card__subtitle">Denver Metro, 14 Months</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-purple);">8</div>
+      <div class="stat-card__label">Next Strategy Session</div>
+      <div class="stat-card__subtitle">May 7, 2026</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+
+    <div class="col-left">
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">In Progress</span>
+          <span class="count-pill count-pill--blue">3</span>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-1">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Procedure Schema Layer Rollout</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">72%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 72%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-2">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">South Denver Geo-Page Build</span>
+            <span class="play-item-ip__pct" style="color: var(--amber);">58%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 58%; background: var(--amber);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-3">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Provider Page E-E-A-T Refresh</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">84%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 84%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">Opportunities</span>
+          <span class="count-pill count-pill--red" id="recommended-badge">2 new</span>
+        </div>
+
+        <div class="play-item selected" data-play-id="rec-1" id="play-rec-1">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Ski Season ACL Authority Hub</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">AI LLM Tracker</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">48 Credits</span>
+              <span class="badge badge--procedure">Authority Hub Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item" data-play-id="rec-2" id="play-rec-2">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Staging Subdomain De-Indexing Crisis</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Technical SEO</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">18 Credits</span>
+              <span class="badge badge--procedure">Technical Remediation</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-3" id="play-rec-3">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">OCC Castle Connolly Center of Excellence Counter-Push</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Competitive Intel</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">34 Credits</span>
+              <span class="badge badge--procedure">Authority Schema</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-4" id="play-rec-4">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Spine Procedure Cluster Build</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">38 Credits</span>
+              <span class="badge badge--procedure">Procedure Hub Build</span>
+            </div>
+          </div>
+        </div>
+
+        <span class="toggle-link" id="toggle-completed">Show 3 completed plays</span>
+
+        <div class="completed-section" id="completed-section">
+          <div class="play-item-completed" data-play-id="comp-1">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Q1 GBP Optimization: 7 Locations</span>
+            </div>
+            <div class="play-item-completed__outcome">+28% direction requests across the network</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-2">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Award Schema Capture (5280 + Castle Connolly)</span>
+            </div>
+            <div class="play-item-completed__outcome">21 surgeons with award badges in SERP</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-3">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Front Range Competitive Landscape Refresh</span>
+            </div>
+            <div class="play-item-completed__outcome">19 Denver metro competitors mapped, 8 ranking shifts flagged</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var ICON_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="#2db5b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.5"/><circle cx="15" cy="14" r="1.5"/><path d="M12 2v4"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>';
+    var ICON_RADAR = '<svg viewBox="0 0 24 24" fill="none" stroke="#4e9df7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>';
+    var ICON_AUDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#f7a600" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>';
+    var ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+    var ICON_LAUNCH_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1h6v6"/><path d="M13 1L6 8"/><path d="M11 8v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/></svg>';
+    var ICON_X_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3L3 11"/><path d="M3 3l8 8"/></svg>';
+    var ICON_GBP = '<svg viewBox="0 0 24 24" fill="none" stroke="#36d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    var ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef6a5e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    var ICON_CODE = '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>';
+
+    var PLAYS = {
+
+      "rec-1": {
+        source: "AI LLM Tracker",
+        sourceIcon: ICON_ROBOT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Ski Season ACL Authority Hub",
+        query: 'AI Overview citation tracking and topical authority analysis for "ACL reconstruction Denver" and ski-injury cluster across Front Range',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Panorama\'s AI Visibility score on the ACL and ski-injury cluster sits at <span class="hl-green">66/100</span>, but the model detects an underleveraged advantage: Panorama\'s US Ski Team affiliation appears in <span class="hl-green">only 18%</span> of the practice\'s ACL-related URLs and is <span class="hl-green">absent from schema entirely</span>. Meanwhile, <span class="hl-blue">UCHealth Steadman Hawkins</span> (Broncos and Rockies team physicians) is being cited in <span class="hl-green">9 of 12</span> ski-injury AI Overviews across Denver-targeted queries. The existing "ACL Injuries by the Numbers" resource is strong but functions as an island, not a hub.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Ski season is Panorama\'s structural advantage in the Denver market and the calendar is the lever. The model forecasts a <span class="hl-green">+41% YoY surge</span> in "ACL reconstruction Denver" and "ski injury orthopedic Denver" queries between October and February. <span class="hl-blue">Steadman Hawkins</span> wins the pro-team narrative, but Panorama owns the elite ski narrative through US Ski Team affiliation, University of Denver, Colorado School of Mines, and Jeffco/Douglas County school athletics. The competitive insight: no Front Range orthopedic group has built a dedicated, schema-rich ACL authority hub that surfaces team-physician credentials in machine-readable form. <span class="hl-blue">OCC</span> and <span class="hl-blue">CU Sports Medicine</span> have ACL pages but no hub structure.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a 14-asset ACL Authority Hub anchored by a redesigned "ACL Injuries by the Numbers" cornerstone, with 6 procedure-comparison pages (BTB vs. hamstring vs. quad tendon, primary vs. revision), 4 recovery-timeline articles, and 3 ski-specific pieces (return to skiing protocol, ACL prevention for ski athletes, mogul/race injury patterns). Layer <span class="hl-green">MedicalProcedure + Physician + SportsTeam</span> schema with US Ski Team affiliation tagging across all 14 assets. Forecasted <span class="hl-green">+780 monthly organic visits</span> at maturity and <span class="hl-green">7-9 AI Overview citations</span> recaptured ahead of the 2026-27 ski season.'
+          }
+        ],
+        procedure: {
+          title: "Authority Hub Build",
+          bullets: [
+            { bold: "Cornerstone Refresh:", text: "Rebuild the ACL Injuries by the Numbers page as a hub with surgeon attribution, US Ski Team credentialing in body and schema, candidacy criteria, and graft comparison tables." },
+            { bold: "14-Asset Cluster:", text: "6 procedure-comparison pages, 4 recovery-timeline pieces, 4 ski-specific articles (return to skiing, prevention, mogul/race patterns, youth ski athletes). All physician-bylined." },
+            { bold: "Schema Architecture:", text: "MedicalProcedure, Physician, FAQPage, and SportsTeam schema with explicit US Ski Team, DU, Colorado School of Mines, and Metro State affiliations exposed for AI Overview eligibility." },
+            { bold: "Pre-Season Sequencing:", text: "Deploy August through October ahead of ski-season query surge. Daily AI Overview tracking on 24-keyword set through end of Q1 2027." }
+          ],
+          cost: "48 Credits"
+        }
+      },
+
+      "rec-2": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Staging Subdomain De-Indexing Crisis",
+        query: 'index hygiene audit for staging.panoramaortho.com and duplicate-content exposure across Google',
+        sections: [
+          {
+            label: "The Data",
+            body: 'The crawler identified <span class="hl-green">staging.panoramaortho.com</span> indexed in Google with <span class="hl-green">147 URLs</span> currently appearing in search results, including <span class="hl-blue">11 surgeon profile pages</span>, <span class="hl-blue">23 procedure pages</span>, and the homepage. Several staging URLs are outranking production equivalents on long-tail queries. The staging environment has no robots.txt block, no x-robots-tag noindex header, and no HTTP authentication. This is duplicate-content leakage of the most damaging kind: a fully crawlable mirror.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'The model classifies this as <span class="hl-green">P0/Critical</span>. Three concrete harms: (1) Google is splitting authority between production and staging on at least <span class="hl-green">31 query-URL pairs</span>, suppressing rankings on commercial-intent terms; (2) AI Overviews have cited <span class="hl-blue">staging.panoramaortho.com URLs</span> on at least 4 ski-injury queries, sending AI traffic to an environment that may have inaccurate data or broken booking flows; (3) the staging mirror exposes pre-publish content and physician changes that should not be public. Likely root cause is WordPress staging environment created without proper noindex enforcement, common in agency handoffs.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'The fix is fast and high-impact. Deploy <span class="hl-green">x-robots-tag: noindex</span> at the server level on the staging subdomain, add HTTP basic authentication, submit removal requests in Google Search Console for all 147 URLs, and implement a recurring monthly audit. Production pages currently outranked by staging mirrors should regain position within <span class="hl-green">14-21 days</span> post-deindexing. This single fix is forecasted to deliver <span class="hl-green">+8-12% organic traffic</span> recovery within 60 days at minimal credit cost.'
+          }
+        ],
+        procedure: {
+          title: "Technical Remediation",
+          bullets: [
+            { bold: "Server-Level Block:", text: "Deploy x-robots-tag: noindex, nofollow header on staging.panoramaortho.com at the web server / WordPress level. Verify across all 147 indexed URLs." },
+            { bold: "Access Control:", text: "Add HTTP basic auth to staging environment to prevent future re-crawl. Coordinate with internal dev team or hosting provider." },
+            { bold: "Search Console Cleanup:", text: "Submit URL removal requests for all 147 indexed staging URLs. Monitor index status for full deindexing within 14 days." },
+            { bold: "Recurring Audit:", text: "Establish monthly index-hygiene check across all panoramaortho.com subdomains. Catch future leakage before it compounds." }
+          ],
+          cost: "18 Credits"
+        }
+      },
+
+      "rec-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "OCC Castle Connolly Center of Excellence Counter-Push",
+        query: 'authority signal and award schema deployment vs. Orthopedic Centers of Colorado in the Denver metro market',
+        sections: [
+          {
+            label: "The Data",
+            body: '<span class="hl-blue">Orthopedic Centers of Colorado (OCC)</span> at occ-ortho.com is actively marketing its <span class="hl-green">Castle Connolly Center of Excellence designation</span> (1 of only 18 nationally, the only orthopedic CCoE in Colorado) and its <span class="hl-green">38 Castle Connolly Top Doctors 2026</span>. Panorama has <span class="hl-green">22 Castle Connolly Top Doctors 2026</span> and <span class="hl-green">21 5280 Top Doctors 2025</span>, plus the "Top 3 Physician Practices in Colorado for 2026" recognition, but these awards appear inconsistently in body content and <span class="hl-green">are not exposed in schema</span> on most surgeon pages.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'OCC is winning a prestige narrative Panorama can credibly contest. The model identified that on <span class="hl-green">queries where both practices appear in the SERP</span> (best orthopedic surgeon Denver, top knee surgeon Denver, top hip surgeon Denver), OCC pages display Castle Connolly badges and CCoE language above the fold while Panorama pages lead with location. The structural fix is exposing Panorama\'s award stack in <span class="hl-green">Schema.org Award properties</span> on Physician markup, using consistent badge components across surgeon profiles, and surfacing the "Top 3 Physician Practices in Colorado" recognition site-wide. Panorama\'s award footprint is broader than OCC\'s on a per-surgeon basis (Castle Connolly + 5280 doubles); the perception gap is presentation, not credentials.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Deploy a coordinated authority counter-push: (1) <span class="hl-green">Award schema</span> on all 22 Castle Connolly + 21 5280 Top Doctor surgeon profiles using Physician.award properties, (2) consistent visual badge components above the fold on every surgeon page, (3) a new "Awards &amp; Recognition" hub page consolidating the practice-level "Top 3 Physician Practices" recognition with structured Organization schema, (4) updated meta titles and descriptions on the top 12 commercial-intent surgeon pages. Forecasted to lift <span class="hl-green">CTR by 14-19%</span> on shared SERPs vs. OCC and recapture authority parity in AI Overviews.'
+          }
+        ],
+        procedure: {
+          title: "Authority Schema",
+          bullets: [
+            { bold: "Award Schema Layer:", text: "Deploy Physician.award schema on 43 surgeon profile pages capturing Castle Connolly Top Doctors 2026, 5280 Top Doctors 2025, fellowship credentials, and team-physician affiliations." },
+            { bold: "Badge Components:", text: "Visual badge module above the fold on every surgeon page. Consistent treatment across desktop and mobile. Clickable to award detail page." },
+            { bold: "Awards Hub Page:", text: "New /awards-recognition page consolidating practice-level recognition (Top 3 Physician Practices Colorado 2026) with full Organization and AggregateRating schema." },
+            { bold: "Meta Refresh:", text: "Rewrite titles and descriptions on top 12 commercial-intent surgeon pages to surface award positioning. Track CTR delta on shared OCC SERPs." }
+          ],
+          cost: "34 Credits"
+        }
+      },
+
+      "rec-4": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Spine Procedure Cluster Build",
+        query: 'content depth and intent-mapping audit for spine procedure pages on panoramaortho.com',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Panorama brands as "Panorama Orthopedics &amp; Spine Center" but the spine vertical is structurally underbuilt: <span class="hl-green">9 spine procedure pages</span> with an average length of <span class="hl-green">540 words</span>, no FAQ schema, and limited surgeon attribution. Top-ranking competitor pages on "spine surgeon Denver" and "lumbar fusion Denver" average <span class="hl-green">1,750+ words</span> with surgical animation, candidacy criteria, and physician-bylined FAQs. Search demand for spine-procedure queries in Denver metro is up <span class="hl-green">+24% YoY</span>.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'The "&amp; Spine Center" half of the brand is doing real work in offline awareness but is not converting in SERPs. Panorama\'s spine surgeons carry strong fellowship credentials and the practice has volume that exceeds what the website signals. <span class="hl-blue">CU Sports Medicine / CU Medicine Orthopedics</span> and <span class="hl-blue">UCHealth Steadman Hawkins</span> outrank Panorama on procedure-specific spine queries despite weaker spine-specific positioning, purely because their pages are deeper. <span class="hl-blue">OCC</span> consolidates spine into a single high-depth hub. The bottleneck is page depth and schema, not surgical capability or authority.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Expand the 9 highest-value spine procedure pages to <span class="hl-green">1,500-1,800 words</span> with physician-bylined FAQs, candidacy criteria, recovery timelines, and full <span class="hl-green">MedicalProcedure + FAQPage</span> schema. Add a spine-vertical hub page that consolidates the procedure cluster and surfaces spine-fellowship surgeon profiles. Lean into Panorama\'s minimally-invasive spine and cervical disc replacement differentiators. Forecasted <span class="hl-green">+520 monthly organic visits</span> across the spine vertical and meaningful AI Overview citation lift on commercial-intent spine queries.'
+          }
+        ],
+        procedure: {
+          title: "Procedure Hub Build",
+          bullets: [
+            { bold: "Page Audit:", text: "Map current rankings, schema gaps, intent fit, and competitor page structures for the 9 priority spine procedure pages plus 4 condition pages." },
+            { bold: "Content Production:", text: "Rewrite each procedure page to 1,500-1,800 words with physician bylines, candidacy criteria, recovery sections, and structured FAQ blocks. Highlight MIS spine and cervical disc replacement differentiators." },
+            { bold: "Spine Hub Page:", text: "New /spine-center cornerstone consolidating the procedure cluster, spine-fellowship surgeon profiles, and Panorama\'s cervical/lumbar/MIS positioning with full Organization schema." },
+            { bold: "Schema Deployment:", text: "MedicalProcedure, FAQPage, and Physician schema on all 13 pages. Validate via Rich Results Test. Internal link to surgeon and location pages." }
+          ],
+          cost: "38 Credits"
+        }
+      },
+
+      "ip-1": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Procedure Schema Layer Rollout",
+        progress: 72,
+        query: "structured data deployment across all Panorama procedure and condition pages",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (architecture) and Phase 2 (high-priority page deployment) are complete. <span class="hl-green">43 of 60 procedure pages</span> now have full MedicalProcedure + FAQPage schema deployed. Average entity count per page has moved from <span class="hl-green">1.4</span> to <span class="hl-green">8.2</span>. Rich result eligibility confirmed in Search Console for all 43 deployed pages.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Performance from the deployed set is tracking ahead of forecast. We\'re seeing an average <span class="hl-green">+26% impressions</span> and <span class="hl-blue">+18% click-through</span> across the 43 pages in the 30 days following each page\'s schema deployment. Four procedure pages (total knee replacement, ACL reconstruction, rotator cuff repair, total hip replacement) have gained AI Overview citations within 18 days of schema deployment, displacing prior <span class="hl-blue">UCHealth Steadman Hawkins</span> and <span class="hl-blue">OCC</span> citations on Denver-targeted queries.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Remaining 17 pages are scoped and queued for deployment over the next 4 weeks (foot &amp; ankle, hand/wrist/elbow, oncology, and bone-health condition pages). Once complete, Panorama will have full structured data coverage across the procedure library, positioning the site for sustained AI Overview citation growth and a meaningful lift in commercial-intent rankings heading into the ski-season ramp.'
+          }
+        ],
+        procedure: {
+          title: "Procedure Schema Layer Rollout",
+          bullets: [
+            { bold: "Completed:", text: "Schema architecture, deployment on 43 of 60 priority procedure pages, Search Console validation, AI Overview tracking activated" },
+            { bold: "In Progress:", text: "Remaining 17 pages (foot &amp; ankle, hand/wrist/elbow, oncology, bone-health condition pages)" },
+            { bold: "Next:", text: "Final QA pass, AI Overview monitoring expansion, condition-page schema build in Q3, integration with Award Schema layer" }
+          ],
+          cost: "52 Credits (allocated)"
+        }
+      },
+
+      "ip-2": {
+        source: "SEO Strategy",
+        sourceIcon: ICON_AUDIT,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "South Denver Geo-Page Build",
+        progress: 58,
+        query: "geo-targeted landing page build for Centennial, Greenwood Village, and DTC market expansion",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (keyword research and content briefs) is complete. We mapped <span class="hl-green">22 high-intent procedure-by-city queries</span> for the South Denver corridor (Centennial, Greenwood Village/DTC, Highlands Ranch) where Panorama\'s recent expansion has outpaced the website\'s geo-coverage. Phase 2 (page production) is in progress: <span class="hl-green">11 of 22</span> pages drafted, 5 in physician review, 11 in production queue.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'South Denver is the most contested Front Range submarket, and Panorama\'s expansion into Centennial coincided with a <span class="hl-blue">UCHealth Steadman Hawkins</span> push on DTC-targeted queries and <span class="hl-blue">HCA HealthONE Orthopedic Specialists</span> consolidating its South Denver footprint. Panorama\'s competitive advantage in the corridor is the Highlands Ranch Town Center location plus the OrthoColorado Hospital halo. Initial 11 pages target the highest-volume queries: <span class="hl-green">"orthopedic surgeon Centennial,"</span> <span class="hl-green">"knee replacement DTC,"</span> <span class="hl-green">"sports medicine Highlands Ranch."</span> Amber status reflects physician-review bottleneck, not strategy or production quality.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Full deployment expected in 5-6 weeks once physician review unblocks. Forecasted <span class="hl-green">+640 monthly organic visits</span> across the three submarkets at maturity. Will also support local pack performance for Highlands Ranch (both locations), the new Centennial office, and the Greenwood Village/DTC presence, reducing dependence on Golden flagship brand search for South Denver patient acquisition.'
+          }
+        ],
+        procedure: {
+          title: "South Denver Geo-Page Build",
+          bullets: [
+            { bold: "Completed:", text: "Keyword research, content briefs, 11 of 22 pages drafted, intent mapping by submarket" },
+            { bold: "In Progress:", text: "Physician review for 5 pages, production for remaining 11 (58% overall). Review cadence accelerator deployed last week." },
+            { bold: "Next:", text: "Complete drafts, deploy with full schema, GBP coordination for Centennial and DTC profiles, 60-day SERP monitoring" }
+          ],
+          cost: "29 Credits (allocated)"
+        }
+      },
+
+      "ip-3": {
+        source: "SEO Strategy",
+        sourceIcon: ICON_AUDIT,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Provider Page E-E-A-T Refresh",
+        progress: 84,
+        query: "provider page authority and credential structuring across 35+ Panorama surgeon and physician profiles",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refresh is <span class="hl-green">84% complete</span>. <span class="hl-green">37 of 43</span> physician profile pages have been rebuilt with full Physician schema, fellowship credential exposure, hospital affiliation tagging, board certification structuring, and team-physician affiliations (US Ski Team, University of Denver, Colorado School of Mines, Metro State, Colorado Christian, USA Rugby, Jeffco/Douglas County school athletics). Six pages remain in final physician sign-off.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Performance is tracking ahead of forecast. Refreshed surgeon pages have moved an average of <span class="hl-green">+4.2 positions</span> on branded "Dr. [Name] Denver" queries. <span class="hl-green">9 surgeons</span> have gained Knowledge Panel enhancements. Most consequential: refreshed pages with US Ski Team affiliation tagging are appearing in AI Overviews for ski-injury queries at <span class="hl-green">2.3x</span> the rate of unrefreshed peers. This validates the Ski Season ACL Authority Hub thesis and feeds the awards counter-push play directly.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Final 6 pages publish in 8-12 days. After completion, the play moves into a 60-day monitoring window with light optimization based on observed query patterns. The structured credential layer also feeds rec-1 (Ski Season ACL Hub) and rec-3 (Castle Connolly Counter-Push) since refreshed pages are the schema substrate both plays build on.'
+          }
+        ],
+        procedure: {
+          title: "Provider Page E-E-A-T Refresh",
+          bullets: [
+            { bold: "Completed:", text: "37 of 43 physician profiles rebuilt with Physician schema, fellowship credentials, board certifications, team-physician affiliation tagging" },
+            { bold: "In Progress:", text: "Final 6 pages in physician sign-off (84% overall)" },
+            { bold: "Next:", text: "Final pages publish, 60-day monitoring window, hand-off into Ski Season ACL Hub and Castle Connolly Counter-Push as foundation layer" }
+          ],
+          cost: "44 Credits (allocated)"
+        }
+      },
+
+      "comp-1": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Q1 GBP Optimization: 7 Locations",
+        query: "Google Business Profile refresh across all 7 Panorama clinic locations",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed all 7 Panorama Google Business Profiles in February-March: Golden HQ, Westminster, Highlands Ranch, Highlands Ranch Town Center, Centennial, Castle Rock, and Greenwood Village/DTC. Corrected primary categories, expanded service descriptions, deployed photo updates from a coordinated practice shoot, refreshed Q&amp;A seeding, and added structured posts for Q2 procedure focuses (ACL reconstruction, total joint replacement, spine).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Across all 7 locations: <span class="hl-green">+28% direction requests</span>, <span class="hl-blue">+24% profile views</span>, and <span class="hl-green">+17% calls</span> in the 60 days post-deployment. Strongest lifts in <span class="hl-blue">Centennial (+52%)</span> and <span class="hl-blue">Highlands Ranch Town Center (+39%)</span>, where prior GBP content had been thinnest as those locations are newer. Golden flagship saw smaller % gains but the largest absolute volume increase. The refresh also separated the two Highlands Ranch locations cleanly in Maps, fixing a duplicate-pin issue that had suppressed both.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'GBP optimization is now integrated into Panorama\'s ongoing care. Weekly post schedule, monthly review response cadence, and quarterly photo refreshes are standardized. Next refresh cycle scheduled for July 2026 to capture summer search behavior, with a pre-ski-season push planned for early October.'
+          }
+        ],
+        procedure: {
+          title: "Q1 GBP Optimization: 7 Locations",
+          bullets: [
+            { bold: "Completed:", text: "All 7 profiles fully refreshed with categories, descriptions, photos, Q&amp;A, and Q2 posts. Highlands Ranch duplicate-pin issue resolved." },
+            { bold: "Result:", text: "+28% direction requests, +24% profile views, +17% calls across the network" },
+            { bold: "Status:", text: "Ongoing maintenance integrated, next refresh July 2026, pre-ski-season push October 2026" }
+          ],
+          cost: "22 Credits (spent)"
+        }
+      },
+
+      "comp-2": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Award Schema Capture (5280 + Castle Connolly)",
+        query: "structured data deployment for surgeon awards and recognition signals",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Deployed <span class="hl-green">Physician.award schema</span> across <span class="hl-green">21 surgeon profile pages</span> capturing 5280 Top Doctors 2025 recognition. Pages now expose award entities in machine-readable form for Knowledge Panel and AI Overview ingestion. Visual badge components added above the fold on each profile.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Within 30 days of deployment, <span class="hl-green">11 of 21</span> surgeons saw 5280 Top Doctor badges appearing in their Knowledge Panel SERPs. Refreshed pages saw a <span class="hl-green">+13% CTR lift</span> on branded "Dr. [Name] Denver" queries. The 5280 award schema also created the technical foundation now being extended to Castle Connolly Top Doctors 2026 (22 surgeons) in the recommended counter-push play. Several refreshed pages displaced <span class="hl-blue">OCC</span> peers in shared SERPs purely on the strength of the award visual signal.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'This work served as the foundation pilot for the broader Castle Connolly Counter-Push (rec-3) and the practice-level "Top 3 Physician Practices Colorado 2026" recognition rollout. Performance from these 21 pages directly informs the schema and badge architecture being deployed across the full award stack.'
+          }
+        ],
+        procedure: {
+          title: "Award Schema Capture (5280 + Castle Connolly)",
+          bullets: [
+            { bold: "Completed:", text: "21 surgeon pages with full Physician.award schema for 5280 Top Doctors 2025, badge component above the fold" },
+            { bold: "Result:", text: "11 surgeons with award badges in SERP Knowledge Panels, +13% CTR lift on branded queries" },
+            { bold: "Status:", text: "Pattern productized into the Castle Connolly Counter-Push play (rec-3) and practice-level Awards Hub" }
+          ],
+          cost: "16 Credits (spent)"
+        }
+      },
+
+      "comp-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Front Range Competitive Landscape Refresh",
+        query: "competitor identification and tracking refresh for the Denver metro and Front Range orthopedic market",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed Panorama\'s competitive tracking set for 2026: <span class="hl-green">19 Denver metro competitors</span> profiled (up from 13 in 2025) with current location count, surgeon roster, schema implementation, blog cadence, paid search activity, and estimated organic traffic. Full ranking baselines refreshed across <span class="hl-green">3,100 keywords</span>.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Most consequential 2026 findings: <span class="hl-blue">Orthopedic Centers of Colorado (OCC)</span> made a measurable schema and authority investment in Q4 2025, leveraging its Castle Connolly Center of Excellence designation across the SERP. <span class="hl-blue">UCHealth Steadman Hawkins Clinic Denver</span> consolidated its Broncos and Rockies team-physician narrative into a single high-depth sports medicine hub. <span class="hl-blue">CU Sports Medicine / CU Medicine Orthopedics</span> launched a multi-site geo-page build across the Front Range. <span class="hl-blue">HCA HealthONE Orthopedic Specialists</span> expanded its Denver Tech Center coverage. <span class="hl-green">8 ranking shifts</span> flagged on commercial-intent queries.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Refreshed tracking is now feeding the AI model continuously. All four current opportunity plays (rec-1 through rec-4) are direct outputs of the refreshed competitive view. Tracking will refresh again at end of Q3, with a dedicated ski-season-specific competitive scan running mid-October.'
+          }
+        ],
+        procedure: {
+          title: "Front Range Competitive Landscape Refresh",
+          bullets: [
+            { bold: "Completed:", text: "19 competitors profiled, 3,100 keywords baselined, 8 ranking shifts flagged across the Denver metro market" },
+            { bold: "Result:", text: "4 active opportunity plays generated from the refreshed competitive view (rec-1 through rec-4)" },
+            { bold: "Status:", text: "Continuous monitoring active; next full refresh at end of Q3, ski-season-specific scan mid-October" }
+          ],
+          cost: "13 Credits (spent)"
+        }
+      }
+    };
+
+    function renderDetail(playId) {
+      var play = PLAYS[playId];
+      if (!play) {
+        document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">Select a play to view details</div>';
+        return;
+      }
+      var sectionsHtml = play.sections.map(function(s) {
+        return '<div class="detail-section">' +
+          '<div class="detail-section__label">' + s.label + '</div>' +
+          '<div class="detail-section__body">' + s.body + '</div>' +
+        '</div>';
+      }).join('');
+      var bulletsHtml = play.procedure.bullets.map(function(b) {
+        return '<li><strong>' + b.bold + '</strong> ' + b.text + '</li>';
+      }).join('');
+      var isCompleted = playId.startsWith('comp-');
+      var isInProgress = playId.startsWith('ip-');
+      var progressHtml = '';
+      if (isInProgress) {
+        var pct = play.progress || 0;
+        var barColor = pct >= 60 ? 'var(--metric-green)' : 'var(--amber)';
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: ' + pct + '%; background: ' + barColor + ';"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: ' + barColor + ';">' + pct + '% Complete</div>' +
+          '</div>';
+      } else if (isCompleted) {
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: 100%; background: var(--metric-green);"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: var(--metric-green);">100% Complete</div>' +
+          '</div>';
+      }
+      var procedureHtml =
+        '<div class="procedure-block">' +
+          '<div class="procedure-block__header">' +
+            '<div class="procedure-block__icon">' + ICON_ROCKET + '</div>' +
+            '<span class="procedure-block__label">Recommended Strategic Play</span>' +
+          '</div>' +
+          '<div class="procedure-block__title">' + play.procedure.title + '</div>' +
+          '<ul class="procedure-block__list">' + bulletsHtml + '</ul>' +
+          '<div class="procedure-block__cost">Cost: ' + play.procedure.cost + '</div>' +
+          (!(isInProgress || isCompleted) ?
+            '<div class="procedure-block__actions">' +
+              '<button class="btn btn--primary" onclick="handleLaunch(\'' + playId + '\')">' + ICON_LAUNCH_SM + ' Launch Play</button>' +
+              '<button class="btn btn--ghost" onclick="handleDismiss(\'' + playId + '\')">' + ICON_X_SM + ' Dismiss</button>' +
+            '</div>' +
+            '<div id="demo-notice-area"></div>'
+          : '') +
+        '</div>';
+      var bottomHtml = (isInProgress || isCompleted) ? procedureHtml + progressHtml : procedureHtml;
+      var html =
+        '<div class="detail-header">' +
+          '<div class="detail-header__icon">' + play.sourceIcon + '</div>' +
+          '<span class="detail-header__source">' + play.source + '</span>' +
+          '<span class="badge ' + play.priorityClass + ' detail-header__priority">' + (isCompleted || isInProgress ? '' : 'Priority: ') + play.priority + '</span>' +
+        '</div>' +
+        '<div class="detail-title">' + play.title + '</div>' +
+        '<div class="detail-query-box">' + play.query + '</div>' +
+        sectionsHtml + bottomHtml;
+      document.getElementById('detail-panel').innerHTML = html;
+    }
+
+    var currentSelected = 'rec-1';
+    var unreadCount = 2;
+
+    function selectPlay(playId, element) {
+      document.querySelectorAll('.play-item.selected, .play-item-ip.selected, .play-item-completed.selected').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      if (element.classList.contains('play-item') && !element.classList.contains('read')) {
+        element.classList.add('read');
+        unreadCount = Math.max(0, unreadCount - 1);
+        document.getElementById('unread-count').textContent = unreadCount;
+        if (unreadCount > 0) {
+          document.getElementById('recommended-badge').textContent = unreadCount + ' new';
+        } else {
+          document.getElementById('recommended-badge').textContent = '0 new';
+          var pulse = document.getElementById('unread-pulse');
+          if (pulse) pulse.style.display = 'none';
+        }
+      }
+      currentSelected = playId;
+      renderDetail(playId);
+    }
+
+    document.querySelectorAll('.play-item').forEach(function(el) {
+      el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+    });
+    document.querySelectorAll('.play-item-ip').forEach(function(el) {
+      el.addEventListener('click', function() {
+        document.querySelectorAll('.play-item.selected, .play-item-completed.selected, .play-item-ip.selected').forEach(function(s) {
+          s.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        currentSelected = el.dataset.playId;
+        renderDetail(el.dataset.playId);
+      });
+    });
+    function bindCompletedPlays() {
+      document.querySelectorAll('.play-item-completed').forEach(function(el) {
+        if (el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+      });
+    }
+    var toggleLink = document.getElementById('toggle-completed');
+    var completedSection = document.getElementById('completed-section');
+    var completedVisible = false;
+    toggleLink.addEventListener('click', function() {
+      completedVisible = !completedVisible;
+      if (completedVisible) {
+        completedSection.classList.add('visible');
+        toggleLink.textContent = 'Hide completed plays';
+        bindCompletedPlays();
+      } else {
+        completedSection.classList.remove('visible');
+        toggleLink.textContent = 'Show 3 completed plays';
+      }
+    });
+
+    function showDemoNotice(message) {
+      var area = document.getElementById('demo-notice-area');
+      if (!area) return;
+      var existing = area.querySelector('.demo-notice');
+      if (existing) existing.remove();
+      var notice = document.createElement('div');
+      notice.className = 'demo-notice';
+      notice.textContent = message;
+      area.appendChild(notice);
+    }
+    function handleLaunch(playId) {
+      showDemoNotice('This is a demo. In the live platform, this would launch the play and deduct credits from your balance.');
+    }
+    function handleDismiss(playId) {
+      showDemoNotice('This is a demo. In the live platform, this play would be dismissed and moved to your archive.');
+    }
+
+    renderDetail('rec-1');
+  </script>
+</body>
+</html>

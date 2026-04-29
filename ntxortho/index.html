@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategic Plays Dashboard | North Texas Orthopedics & Spine Center</title>
+
+  <!-- Google Fonts: Roboto 400, 500 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-page: #0e1520;
+      --bg-card: #1a2838;
+      --border: #283848;
+      --border-selected: #4e9df7;
+      --text-muted: #6b7a8d;
+      --text-body: #8a99ab;
+      --metric-red: #ef6a5e;
+      --metric-green: #36d399;
+      --metric-blue: #4e9df7;
+      --metric-purple: #8b5cf6;
+      --amber: #f7a600;
+      --btn-primary: #00529b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: auto; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-page); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-page); }
+    body { background: var(--bg-page); color: #e2e8f0; font-family: 'Roboto', sans-serif; font-weight: 400; font-size: 14px; line-height: 1.5; padding: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px 16px; text-align: center; position: relative; }
+    .stat-card__value { font-size: 52px; font-weight: 500; line-height: 1.1; margin-bottom: 4px; }
+    .stat-card__label { font-size: 16px; font-weight: 500; color: #e2e8f0; margin-bottom: 2px; }
+    .stat-card__subtitle { font-size: 13px; color: var(--text-muted); }
+    .pulse-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--metric-red); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 106, 94, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(239, 106, 94, 0); } }
+    .dashboard { display: flex; gap: 24px; align-items: flex-start; }
+    .col-left { width: 40%; min-width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 24px; }
+    .col-right { flex: 1; min-width: 0; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-header__title { font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+    .count-pill { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 12px; line-height: 1.4; }
+    .count-pill--blue { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .count-pill--red { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .play-item-ip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .play-item-ip:hover { border-color: var(--text-muted); }
+    .play-item-ip.selected { border-color: var(--border-selected); }
+    .play-item-ip__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .play-item-ip__title { font-size: 14px; font-weight: 500; color: #e2e8f0; }
+    .play-item-ip__pct { font-size: 13px; font-weight: 500; }
+    .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .progress-bar__fill { height: 100%; border-radius: 2px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    .play-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+    .play-item:hover { border-color: var(--text-muted); }
+    .play-item.selected { border-color: var(--border-selected); }
+    .play-item.read .play-item__title { color: var(--text-body); }
+    .play-item__unread-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--metric-red); }
+    .play-item.read .play-item__unread-dot { display: none; }
+    .play-item__title { font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 6px; padding-right: 20px; }
+    .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge--source { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .badge--critical { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .badge--medium { background: rgba(247, 166, 0, 0.12); color: var(--amber); }
+    .badge--credits { background: rgba(54, 211, 153, 0.12); color: var(--metric-green); }
+    .badge--procedure { background: rgba(139, 92, 246, 0.12); color: var(--metric-purple); }
+    .toggle-link { display: inline-block; font-size: 13px; color: var(--metric-blue); cursor: pointer; margin-top: 4px; user-select: none; }
+    .toggle-link:hover { text-decoration: underline; }
+    .completed-section { display: none; margin-top: 12px; }
+    .completed-section.visible { display: block; }
+    .play-item-completed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; opacity: 0.6; transition: opacity 0.15s, border-color 0.15s; position: relative; }
+    .play-item-completed:hover { opacity: 0.85; border-color: var(--text-muted); }
+    .play-item-completed.selected { border-color: var(--border-selected); opacity: 0.85; }
+    .play-item-completed__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .play-item-completed__check { color: var(--metric-green); font-size: 14px; flex-shrink: 0; }
+    .play-item-completed__title { font-size: 14px; font-weight: 500; color: var(--text-body); }
+    .play-item-completed__outcome { font-size: 12px; color: var(--metric-green); margin-left: 22px; }
+    .detail-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+    .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .detail-header__icon { width: 28px; height: 28px; flex-shrink: 0; }
+    .detail-header__source { font-size: 13px; font-weight: 500; color: var(--text-body); }
+    .detail-header__priority { margin-left: auto; }
+    .detail-title { font-size: 20px; font-weight: 500; color: #e2e8f0; margin-bottom: 16px; }
+    .detail-query-box { background: var(--bg-page); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-body); margin-bottom: 20px; font-style: italic; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-section__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #e2e8f0; margin-bottom: 6px; }
+    .detail-section__body { font-size: 14px; color: var(--text-body); line-height: 1.6; }
+    .hl-green { background: rgba(54, 211, 153, 0.1); color: var(--metric-green); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .hl-blue { background: rgba(78, 157, 247, 0.1); color: var(--metric-blue); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .procedure-block { background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .procedure-block__header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .procedure-block__icon { width: 22px; height: 22px; flex-shrink: 0; }
+    .procedure-block__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .procedure-block__title { font-size: 18px; font-weight: 500; color: #e2e8f0; margin-bottom: 14px; }
+    .procedure-block__list { list-style: none; margin-bottom: 14px; }
+    .procedure-block__list li { font-size: 13px; color: var(--text-body); line-height: 1.7; padding-left: 16px; position: relative; }
+    .procedure-block__list li::before { content: "•"; position: absolute; left: 0; color: var(--text-muted); }
+    .procedure-block__list li strong { color: #e2e8f0; font-weight: 500; }
+    .procedure-block__cost { font-size: 14px; font-weight: 500; color: var(--metric-green); margin-bottom: 16px; }
+    .procedure-block__actions { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; font-family: 'Roboto', sans-serif; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn--primary { background: var(--btn-primary); color: #ffffff; }
+    .btn--ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .detail-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+    .demo-banner { background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.25); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .demo-banner__icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--amber); }
+    .demo-banner__content { flex: 1; }
+    .demo-banner__title { font-size: 14px; font-weight: 500; color: var(--amber); margin-bottom: 4px; }
+    .demo-banner__text { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+    .demo-notice { margin-top: 12px; padding: 10px 14px; background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.2); border-radius: 6px; font-size: 12px; color: var(--amber); line-height: 1.5; animation: fadeInNotice 0.3s ease; }
+    @keyframes fadeInNotice { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .play-item__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .play-item__meta-left { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .play-item__meta-right { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+    .detail-progress { margin-top: 24px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .detail-progress__label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+    .detail-progress__bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .detail-progress__fill { height: 100%; border-radius: 4px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    @keyframes fillBar { from { width: 0; } }
+    .detail-progress__pct { font-size: 14px; font-weight: 500; text-align: right; }
+  </style>
+</head>
+<body>
+
+  <div class="demo-banner">
+    <div class="demo-banner__icon">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+    </div>
+    <div class="demo-banner__content">
+      <div class="demo-banner__title">Demo Mode Active</div>
+      <div class="demo-banner__text">This is a demonstration of the Patient Genius platform built using North Texas Orthopedics &amp; Spine Center's market data. Strategic plays, competitor analysis, and recommendations shown here are illustrative of how the system surfaces opportunities mid-engagement. Year-two plays focus on extending wins from year one and leveraging NTX's spine certification edge, not foundational rebuilds.</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="pulse-dot" id="unread-pulse"></div>
+      <div class="stat-card__value" style="color: var(--metric-red);" id="unread-count">2</div>
+      <div class="stat-card__label">Unread Opportunities</div>
+      <div class="stat-card__subtitle">New plays to review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-green);">198</div>
+      <div class="stat-card__label">Credits Remaining</div>
+      <div class="stat-card__subtitle">Year 2 Allocation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-blue);">18.9</div>
+      <div class="stat-card__label">Million Data Points</div>
+      <div class="stat-card__subtitle">2 Markets, 13 Months</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-purple);">12</div>
+      <div class="stat-card__label">Next Strategy Session</div>
+      <div class="stat-card__subtitle">May 12, 2026</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+
+    <div class="col-left">
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">In Progress</span>
+          <span class="count-pill count-pill--blue">3</span>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-1">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">URL Path Consolidation: /speciality/ &rarr; /specialty/</span>
+            <span class="play-item-ip__pct" style="color: var(--amber);">52%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 52%; background: var(--amber);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-2">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Spine Procedure Page Schema Layer</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">74%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 74%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-3">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Trophy Club &amp; Colleyville Geo-Pages</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">68%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 68%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">Opportunities</span>
+          <span class="count-pill count-pill--red" id="recommended-badge">2 new</span>
+        </div>
+
+        <div class="play-item selected" data-play-id="rec-1" id="play-rec-1">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Spine ASC Certification Authority Push</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">AI LLM Tracker</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">44 Credits</span>
+              <span class="badge badge--procedure">Authority Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item" data-play-id="rec-2" id="play-rec-2">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Lumbar ADR Content Hub Expansion</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">32 Credits</span>
+              <span class="badge badge--procedure">Procedure Hub Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-3" id="play-rec-3">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">DISC Spine Institute Ranking Drop</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Competitive Intel</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">24 Credits</span>
+              <span class="badge badge--procedure">Organic Gap Capture</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-4" id="play-rec-4">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Mako Knee Replacement Page Build</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">26 Credits</span>
+              <span class="badge badge--procedure">Content Depth Build</span>
+            </div>
+          </div>
+        </div>
+
+        <span class="toggle-link" id="toggle-completed">Show 3 completed plays</span>
+
+        <div class="completed-section" id="completed-section">
+          <div class="play-item-completed" data-play-id="comp-1">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Q1 GBP Optimization: 2 Locations</span>
+            </div>
+            <div class="play-item-completed__outcome">+37% direction requests across both offices</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-2">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Provider Page E-E-A-T Refresh</span>
+            </div>
+            <div class="play-item-completed__outcome">12 surgeons with full Physician schema and credentials</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-3">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Grapevine Corridor Competitive Landscape</span>
+            </div>
+            <div class="play-item-completed__outcome">13 competitors mapped including DISC Spine</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var ICON_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="#2db5b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.5"/><circle cx="15" cy="14" r="1.5"/><path d="M12 2v4"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>';
+    var ICON_RADAR = '<svg viewBox="0 0 24 24" fill="none" stroke="#4e9df7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>';
+    var ICON_AUDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#f7a600" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>';
+    var ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+    var ICON_LAUNCH_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1h6v6"/><path d="M13 1L6 8"/><path d="M11 8v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/></svg>';
+    var ICON_X_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3L3 11"/><path d="M3 3l8 8"/></svg>';
+    var ICON_GBP = '<svg viewBox="0 0 24 24" fill="none" stroke="#36d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    var ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef6a5e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    var ICON_CODE = '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>';
+
+    var PLAYS = {
+
+      "rec-1": {
+        source: "AI LLM Tracker",
+        sourceIcon: ICON_ROBOT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Spine ASC Certification Authority Push",
+        query: 'AI Overview citation tracking and authority signal mapping for "spine surgery" queries leveraging the Joint Commission Advanced Certification at Texas Health Orthopedic Surgery Center Heritage',
+        sections: [
+          {
+            label: "The Data",
+            body: 'In <span class="hl-green">January 2025</span>, Texas Health Orthopedic Surgery Center Heritage at Keller/Alliance became the <span class="hl-green">first ASC in the country</span> to earn The Joint Commission\'s <span class="hl-green">Advanced Certification in Spine Surgery</span>. Dr. Briseño and Dr. Donegan operate there. The credential is mentioned on <span class="hl-green">2 NTX pages</span> (a press item and a brief mention on the spine specialty page) and is essentially absent from AI Overview citations. Current AI Visibility on "spine surgeon Grapevine" and "minimally invasive spine surgery DFW" sits at <span class="hl-green">61/100</span> with <span class="hl-blue">DISC Spine Institute</span> and <span class="hl-blue">Baylor Scott &amp; White Grapevine Orthopedics</span> taking 7 of 11 tracked AI citations.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is the single most under-leveraged credential in the DFW orthopedic market. A national-first JCAHO Advanced Certification is the kind of authority signal AI systems and Google\'s E-E-A-T model are explicitly built to surface, and NTX is sitting on it without the supporting content infrastructure. <span class="hl-blue">DISC Spine Institute</span> ranks above NTX on most spine queries despite having no comparable accreditation, purely because their pages are structured to be lifted. Briseño (spine, since 2014) and Donegan have the surgical record to anchor the narrative; the gap is digital PR, schema-marked authority blocks, and a dedicated certification page that AI engines can cite cleanly.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a dedicated spine certification authority page (1,800+ words) with the JCAHO credential as the marquee, surgeon attribution to Briseño and Donegan, MedicalProcedure + MedicalOrganization + Award schema, and links to the underlying spine procedure pages. Pair with a <span class="hl-green">6-outlet digital PR push</span> targeting DFW healthcare publications, regional business journals, and 2 national spine industry trades. Forecasted: recover <span class="hl-green">8-10 of the 11 displaced AI citations</span> within 60-75 days and capture position #1-2 for "spine certified ASC Texas" and 4 related authority queries.'
+          }
+        ],
+        procedure: {
+          title: "Authority Build",
+          bullets: [
+            { bold: "Certification Hub Page:", text: "Dedicated 1,800+ word page leading with the national-first JCAHO Advanced Certification, surgeon attribution to Briseño and Donegan, the Texas Health Heritage facility, and full MedicalOrganization + Award + MedicalProcedure schema." },
+            { bold: "Digital PR Push:", text: "Coordinated outreach to 6 outlets (D Magazine, Fort Worth Magazine, Dallas Business Journal, Becker's Spine Review, Outpatient Surgery Magazine, Modern Healthcare) anchoring the national-first angle." },
+            { bold: "Schema &amp; AI Lift:", text: "Restructure spine specialty page and procedure pages to expose the certification in physician-attributed Q&amp;A blocks AI systems can lift directly." },
+            { bold: "Validation:", text: "Daily AI Overview citation tracking across 11 spine queries plus 8 long-tail authority terms for 75 days post-deployment." }
+          ],
+          cost: "44 Credits"
+        }
+      },
+
+      "rec-2": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Lumbar ADR Content Hub Expansion",
+        query: 'content depth analysis for lumbar artificial disc replacement and the surrounding ADR procedure cluster',
+        sections: [
+          {
+            label: "The Data",
+            body: 'NTX has <span class="hl-green">1 page</span> on lumbar artificial disc replacement (~740 words) and <span class="hl-green">1 page</span> on cervical disc replacement. Search demand for "lumbar artificial disc replacement Grapevine" is up <span class="hl-green">+44% YoY</span>. <span class="hl-blue">DISC Spine Institute</span> in Southlake currently holds <span class="hl-green">positions #1-2</span> on the primary commercial-intent terms with a 7-page ADR cluster that averages 2,100 words per page including FAQ schema, candidacy quizzes, and recovery timelines.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Lumbar ADR is the highest-margin elective spine procedure in the practice mix and Dr. Briseño performs it routinely under the JCAHO-certified ASC umbrella. The credential gap NTX has over DISC Spine on the surgical side (national-first ASC certification, multi-surgeon spine bench) is reversed on the digital side: DISC Spine is publishing 7x the ADR content NTX is. Three of the ADR-adjacent queries NTX should own ("lumbar disc replacement vs fusion," "ADR candidacy Grapevine," "cervical artificial disc Southlake") have zero NTX page targeting them at all. The fix is a procedure cluster, not a single page rewrite.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a 6-page ADR procedure hub: cornerstone lumbar ADR page (1,800 words, expanded), refreshed cervical ADR page, plus 4 supporting articles (ADR vs. fusion, candidacy criteria, recovery week-by-week, insurance and cost). Tie all to Briseño with full Physician + MedicalProcedure schema and weave the JCAHO certification into the candidacy and safety sections. Forecasted: <span class="hl-green">+285 monthly organic visits</span> at maturity with strong elective-procedure conversion. Highest-leverage geography is Grapevine, Southlake, and Colleyville where DISC Spine\'s lead is largest.'
+          }
+        ],
+        procedure: {
+          title: "Procedure Hub Build",
+          bullets: [
+            { bold: "Cornerstone Expansion:", text: "Rewrite lumbar ADR page to 1,800+ words with Briseño byline, candidacy criteria, recovery timeline, JCAHO ASC integration, and full MedicalProcedure schema." },
+            { bold: "Cervical Refresh:", text: "Refresh and expand cervical disc replacement page to match cornerstone depth, with surgeon attribution and FAQ schema." },
+            { bold: "Supporting Cluster:", text: "4 articles: ADR vs. lumbar fusion, ADR candidacy self-assessment, recovery week-by-week, insurance and cost guide. All interlinked." },
+            { bold: "Geo Targeting:", text: "Light variants for Grapevine, Southlake, Colleyville, and Trophy Club. Internal links to Briseño profile and certification hub." },
+            { bold: "Promotion:", text: "Paid search reinforcement on top 5 commercial-intent terms during 60-day ranking ramp window." }
+          ],
+          cost: "32 Credits"
+        }
+      },
+
+      "rec-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "DISC Spine Institute Ranking Drop",
+        query: 'ranking movement for "minimally invasive spine surgery Southlake" and 6 related MIS spine queries where DISC Spine has historically held #1-2',
+        sections: [
+          {
+            label: "The Data",
+            body: '<span class="hl-blue">DISC Spine Institute</span> has slipped from positions <span class="hl-green">#1-2 to #3-5</span> across <span class="hl-green">6 MIS spine queries</span> over the past 41 days, including "minimally invasive spine surgery Southlake," "MIS spine Colleyville," and "endoscopic spine surgery DFW." Their content cadence has gone quiet (no new posts since early February), they\'ve lost <span class="hl-green">3 referring domains</span> in March, and their primary MIS spine landing page has not been updated in 11 months.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'DISC Spine\'s drop appears structural. Two of the three lost referring domains were directory listings, but one was a regional health publication that previously delivered consistent referral traffic. Their AI Overview citations are dropping in lockstep with rank, suggesting both algorithmic and authority signals are softening simultaneously. NTX has the surgical bench (Briseño + Donegan + the JCAHO-certified ASC) but does not currently rank in the top 5 for any of the 6 affected queries because page-level MIS spine content is thin. The window to displace DISC Spine on terms they spent years owning is open right now.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Targeted MIS spine hub refresh plus 3 supporting articles (MIS vs. open spine surgery, recovery comparison, candidacy criteria) positioned to claim the rankings DISC Spine is vacating. Lean into the JCAHO certification and Briseño\'s MIS expertise in the page narrative. Forecasted: capture <span class="hl-green">3-4 of the 6 affected queries</span> within 60-75 days of deployment, with the remaining 2 contested but reachable by Q3. The Trophy Club and Colleyville geo-pages already in progress will reinforce local-pack visibility.'
+          }
+        ],
+        procedure: {
+          title: "Organic Gap Capture",
+          bullets: [
+            { bold: "MIS Hub Refresh:", text: "Rewrite NTX's minimally invasive spine surgery page with Briseño + Donegan attribution, JCAHO ASC integration, FAQ schema targeting the 6 queries DISC Spine is losing." },
+            { bold: "Article Cluster:", text: "3 supporting pieces (MIS vs. open spine, MIS recovery comparison, MIS candidacy criteria) interlinked with the hub and ADR cluster." },
+            { bold: "Local Reinforcement:", text: "Coordinate with Trophy Club and Colleyville geo-pages already in progress to reinforce local-pack on Southlake-adjacent queries." },
+            { bold: "Tracking:", text: "Daily SERP monitoring on the 6 affected queries plus 9 long-tail variants for 90 days." }
+          ],
+          cost: "24 Credits"
+        }
+      },
+
+      "rec-4": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Mako Knee Replacement Page Build",
+        query: 'content gap audit for robotic Mako knee replacement and related commercial-intent joint replacement queries',
+        sections: [
+          {
+            label: "The Data",
+            body: 'NTX performs robotic Mako knee replacements (Dr. Mulligan, Dr. Moffett, Dr. Williams on the joint replacement bench) but has <span class="hl-green">zero dedicated Mako content</span>. The procedure is mentioned in <span class="hl-green">1 blog post</span> from 2023 and a single bullet on the joint replacement overview page. Search demand for "Mako knee replacement Grapevine" and "robotic knee replacement Keller TX" runs <span class="hl-green">+62% YoY</span>. <span class="hl-blue">Texas Orthopedic Specialists</span> and <span class="hl-blue">Baylor Scott &amp; White Grapevine</span> both hold top-3 positions on these queries with dedicated Mako pages.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is the cleanest content gap in the audit: NTX delivers the procedure under the same surgical roof as the JCAHO-certified ASC and has three credentialed total joint surgeons, but is publishing nothing about it. Mako is the highest-converting branded procedure in the joint replacement category because the brand recognition pre-qualifies search intent. Texas Orthopedic Specialists\' Mako page is 1,400 words, has full MedicalProcedure schema, and links from 4 supporting articles. NTX could match it in two production sprints with the surgeons already credentialed.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a dedicated Mako knee replacement page (1,500-1,800 words) with surgeon attribution to Mulligan, Moffett, and Williams; full MedicalProcedure + FAQPage schema; recovery timeline; and Mako-vs-traditional comparison. Add a robotic Mako hip replacement variant if surgeon coverage supports it. Forecasted: <span class="hl-green">+195 monthly organic visits</span> at maturity with strong elective conversion. Pairs with the Keller/Alliance geo-page already in flight.'
+          }
+        ],
+        procedure: {
+          title: "Content Depth Build",
+          bullets: [
+            { bold: "Cornerstone Page:", text: "Build a 1,500-1,800 word Mako knee replacement page with surgeon attribution (Mulligan, Moffett, Williams), candidacy and recovery sections, and full MedicalProcedure + FAQPage schema." },
+            { bold: "Comparison Content:", text: "Mako vs. traditional knee replacement comparison with structured table and FAQ block AI systems can lift cleanly." },
+            { bold: "Geo Tie-In:", text: "Internal links from Grapevine and Keller/Alliance location pages and the in-progress Trophy Club / Colleyville geo-pages." },
+            { bold: "Validation:", text: "60-day SERP and AI Overview tracking on Mako commercial-intent queries plus referral attribution from the joint replacement category." }
+          ],
+          cost: "26 Credits"
+        }
+      },
+
+      "ip-1": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "URL Path Consolidation: /speciality/ &rarr; /specialty/",
+        progress: 52,
+        query: "URL inconsistency cleanup across /speciality/ (sic) and /specialities/ paths splitting link equity and creating duplicate content",
+        sections: [
+          {
+            label: "The Data",
+            body: 'NTX\'s WordPress site has <span class="hl-green">14 URLs</span> using the misspelled <span class="hl-green">/speciality/</span> path alongside parent <span class="hl-green">/specialities/</span> paths, plus a partial set of correctly-spelled /specialty/ URLs from earlier migrations. Crawl analysis identified <span class="hl-green">11 duplicate or near-duplicate page pairs</span>, fragmented link equity across <span class="hl-green">38 internal links</span>, and 6 external backlinks pointing to the misspelled variant.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'The misspelled path is a long-running WordPress quirk that has compounded over multiple content sprints. It costs NTX both visible (split rankings on a handful of queries) and invisible (diluted link equity, AI crawler confusion) authority. Phase 1 (audit and mapping) is complete. Phase 2 (URL standardization to /specialty/, 301 chain deployment, internal link rewrite) is <span class="hl-green">52% deployed</span>. <span class="hl-blue">7 of 14</span> mismatched URLs have been redirected and internal links rewritten; the spine, hand, and pain management subsections are queued.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Remaining 7 URLs scoped for completion in 3-4 weeks. Once consolidated, NTX will have a clean canonical URL structure, recovered link equity from the 6 external backlinks, and a measurable uplift on queries currently splitting impressions across the duplicates. Required prerequisite for the spine schema rollout (ip-2) to deploy on stable canonical URLs.'
+          }
+        ],
+        procedure: {
+          title: "URL Path Consolidation: /speciality/ &rarr; /specialty/",
+          bullets: [
+            { bold: "Completed:", text: "Full URL audit, redirect map, 7 of 14 mismatched URLs redirected, internal link rewrite for completed pages" },
+            { bold: "In Progress:", text: "Spine, hand, and pain management subsections (52% overall)" },
+            { bold: "Next:", text: "Complete remaining 7 redirects, validate 301 chains, request external backlink updates from 6 referring domains" }
+          ],
+          cost: "22 Credits (allocated)"
+        }
+      },
+
+      "ip-2": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Spine Procedure Page Schema Layer",
+        progress: 74,
+        query: "MedicalProcedure + FAQPage schema deployment across the spine vertical procedure pages",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (architecture) and Phase 2 (high-priority page deployment) are complete. <span class="hl-green">11 of 15 spine procedure pages</span> now have full MedicalProcedure + FAQPage schema deployed including lumbar fusion, lumbar ADR, cervical fusion, cervical ADR, and the MIS spine umbrella page. Average entity count per spine page has moved from <span class="hl-green">1.4</span> to <span class="hl-green">8.2</span>. Rich result eligibility confirmed in Search Console for all 11 deployed pages.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Early performance from the 11 deployed pages is strong. Average <span class="hl-green">+26% impressions</span> and <span class="hl-blue">+19% click-through</span> in the 30 days following each page\'s schema deployment. The lumbar ADR page (which feeds the ADR Hub Expansion play) recovered an AI Overview citation on "lumbar artificial disc replacement DFW" within 18 days of schema deployment. Schema also exposes the JCAHO certification entity on every spine procedure page, feeding directly into the certification authority play.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Remaining 4 spine pages (sciatica, spinal stenosis, herniated disc, spondylolisthesis) scoped for deployment in next 2 weeks. After completion, NTX will have full schema coverage across the entire spine vertical, positioning the practice for sustained AI Overview citation gains and a meaningful Q3 lift on procedure-specific queries. Prerequisite is the URL consolidation (ip-1) hitting the spine subsection.'
+          }
+        ],
+        procedure: {
+          title: "Spine Procedure Page Schema Layer",
+          bullets: [
+            { bold: "Completed:", text: "Schema architecture, deployment on 11 of 15 spine procedure pages including lumbar/cervical ADR and MIS umbrella, Search Console validation" },
+            { bold: "In Progress:", text: "Sciatica, spinal stenosis, herniated disc, and spondylolisthesis pages (74% overall)" },
+            { bold: "Next:", text: "Final 4 pages deployed, AI Overview citation tracking activated, expansion into joint replacement and hand verticals in Q3" }
+          ],
+          cost: "30 Credits (allocated)"
+        }
+      },
+
+      "ip-3": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Trophy Club & Colleyville Geo-Pages",
+        progress: 68,
+        query: "geo-targeted landing page build for the Trophy Club and Colleyville affluent corridor adjacent to the Grapevine and Keller/Alliance offices",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (keyword research and content briefs) is complete. Mapped <span class="hl-green">14 high-intent procedure-by-city queries</span> across Trophy Club and Colleyville where NTX currently has no dedicated page. Phase 2 (page production) is in progress: <span class="hl-green">10 of 14</span> pages drafted, 6 in physician review, 4 still in queue. Initial deployments target "orthopedic spine surgeon Trophy Club," "knee replacement Colleyville," "sports medicine Trophy Club," and "hand surgeon Colleyville."'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Trophy Club and Colleyville sit in the geographic dead zone between NTX\'s Grapevine HQ and Keller/Alliance offices, both highly affluent corridors with strong elective procedure demand. Competitive density is low: <span class="hl-blue">Precision Orthopedic &amp; Sports Medicine</span> has weak local presence here, <span class="hl-blue">DISC Spine</span> targets Southlake instead, and <span class="hl-blue">Texas Orthopedic Specialists</span> has no Colleyville-specific pages. NTX\'s 12-physician roster and JCAHO-certified ASC are over-credentialed for the competitive set.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Full deployment expected in 2-3 weeks. Forecasted <span class="hl-green">+340 monthly organic visits</span> across the two markets at maturity. Will reinforce local pack performance for both office locations and feed conversion volume into the Lumbar ADR cluster (rec-2) and Mako knee page (rec-4) once those go live.'
+          }
+        ],
+        procedure: {
+          title: "Trophy Club & Colleyville Geo-Pages",
+          bullets: [
+            { bold: "Completed:", text: "Keyword research, content briefs, 10 of 14 pages drafted with surgeon attribution" },
+            { bold: "In Progress:", text: "Physician review for 6 pages, production for remaining 4 (68% overall)" },
+            { bold: "Next:", text: "Complete drafts, deploy with full LocalBusiness + Physician schema, 60-day SERP monitoring" }
+          ],
+          cost: "20 Credits (allocated)"
+        }
+      },
+
+      "comp-1": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Q1 GBP Optimization: 2 Locations",
+        query: "Google Business Profile refresh across the Grapevine HQ and Keller/Alliance office",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed both NTX Google Business Profiles in February-March: corrected primary categories, expanded service descriptions, deployed photo updates from a coordinated practice shoot covering both offices and the Texas Health Heritage ASC, refreshed Q&amp;A seeding, and added structured posts for Q2 procedure focuses (spine ADR, Mako knee).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Across both locations: <span class="hl-green">+37% direction requests</span>, <span class="hl-blue">+31% profile views</span>, and <span class="hl-green">+22% calls</span> in the 60 days post-deployment. Strongest lift in <span class="hl-blue">Keller/Alliance (+48%)</span>, where prior GBP content had been thinnest and the JCAHO ASC certification was added to the profile description. <span class="hl-blue">Grapevine HQ</span> saw smaller % gains but the largest absolute volume increase given its 1989 anchor presence.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'GBP optimization is now integrated into NTX\'s ongoing care. Weekly post schedule, monthly review response cadence, and quarterly photo refreshes are standardized. Next refresh cycle scheduled for July 2026 to capture summer search behavior, with priority on continuing to surface the JCAHO certification on the Keller/Alliance profile.'
+          }
+        ],
+        procedure: {
+          title: "Q1 GBP Optimization: 2 Locations",
+          bullets: [
+            { bold: "Completed:", text: "Both profiles fully refreshed with categories, descriptions, photos, Q&amp;A, and Q2 posts; JCAHO certification surfaced on Keller/Alliance" },
+            { bold: "Result:", text: "+37% direction requests, +31% profile views, +22% calls across both offices" },
+            { bold: "Status:", text: "Ongoing maintenance integrated, next refresh July 2026" }
+          ],
+          cost: "14 Credits (spent)"
+        }
+      },
+
+      "comp-2": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Provider Page E-E-A-T Refresh",
+        query: "physician page expansion and Physician schema deployment for the 12-surgeon NTX roster",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed all <span class="hl-green">12 physician pages</span> in February-March: extended bios with fellowship credentials, board certifications, hospital affiliations, publication links, and procedure focus. Deployed full <span class="hl-green">Physician schema</span> on every surgeon page including Pat Peters (founder, 1989), Kerry Donegan, Michael Briseño (spine, 2014), Ryan Mulligan, Jeffrey Moffett, Nathan Williams, Kristen Fleager (hand), and Melissa Murphy (interventional pain).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Pre-refresh, average physician page was <span class="hl-green">340 words</span> with no schema markup. Post-refresh, average page is <span class="hl-green">820 words</span> with full Physician + MedicalOrganization schema. Within 45 days of deployment, <span class="hl-green">7 surgeons</span> gained Knowledge Panel eligibility on branded surgeon-name searches; Briseño and Donegan in particular saw their pages lifted in AI Overview responses for "spine surgeon Grapevine" and "JCAHO certified spine surgeon Texas." E-E-A-T signal density measured by the model has moved from <span class="hl-green">42/100</span> to <span class="hl-green">76/100</span> across the roster.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'This work is the foundation for the certification authority push (rec-1) and feeds physician attribution into every procedure-page schema deployment going forward. The 5 PAs and 1 NP will receive a lighter version of the same treatment in Q3.'
+          }
+        ],
+        procedure: {
+          title: "Provider Page E-E-A-T Refresh",
+          bullets: [
+            { bold: "Completed:", text: "All 12 surgeon pages expanded with credentials, fellowships, publications; full Physician schema deployed" },
+            { bold: "Result:", text: "7 surgeons newly Knowledge Panel eligible, E-E-A-T density 42->76 on the model's roster score" },
+            { bold: "Status:", text: "PAs and NP scheduled for the same treatment in Q3" }
+          ],
+          cost: "16 Credits (spent)"
+        }
+      },
+
+      "comp-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Grapevine Corridor Competitive Landscape",
+        query: "competitor identification and tracking refresh for the Grapevine, Keller/Alliance, Southlake, and Colleyville corridor",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed NTX\'s competitive tracking set for 2026: <span class="hl-green">13 corridor competitors</span> profiled (up from 9 in 2025) with current location count, surgeon roster, schema implementation, blog cadence, paid search activity, and estimated organic traffic. Full ranking baselines refreshed across <span class="hl-green">1,820 keywords</span>. Tracked set includes <span class="hl-blue">DISC Spine Institute</span>, <span class="hl-blue">Texas Orthopedic Specialists</span>, <span class="hl-blue">Precision Orthopedic &amp; Sports Medicine</span>, and <span class="hl-blue">Baylor Scott &amp; White Grapevine Orthopedics</span>.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Most consequential 2026 findings: <span class="hl-blue">DISC Spine Institute</span> appears to be in a soft phase (drove the rec-3 displacement play). <span class="hl-blue">Texas Orthopedic Specialists</span> made measurable schema and content investments late 2025 that have improved their visibility on robotic and joint replacement queries. <span class="hl-blue">Baylor Scott &amp; White Grapevine</span> consolidated their orthopedic service pages into a single optimized hub. <span class="hl-blue">Precision Orthopedic</span> remains weak on geo-targeted content, leaving the Trophy Club and Colleyville opening that ip-3 is now claiming.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Refreshed tracking is now feeding the AI model continuously. Three of the four current opportunity plays (rec-1, rec-2, rec-3) are direct outputs of the refreshed competitive view. Tracking will refresh again at end of Q3.'
+          }
+        ],
+        procedure: {
+          title: "Grapevine Corridor Competitive Landscape",
+          bullets: [
+            { bold: "Completed:", text: "13 competitors profiled including DISC Spine, Texas Orthopedic Specialists, Precision, Baylor Grapevine; 1,820 keywords baselined" },
+            { bold: "Result:", text: "3 active opportunity plays generated from the refreshed competitive view" },
+            { bold: "Status:", text: "Continuous monitoring active; next full refresh at end of Q3" }
+          ],
+          cost: "10 Credits (spent)"
+        }
+      }
+    };
+
+    function renderDetail(playId) {
+      var play = PLAYS[playId];
+      if (!play) {
+        document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">Select a play to view details</div>';
+        return;
+      }
+      var sectionsHtml = play.sections.map(function(s) {
+        return '<div class="detail-section">' +
+          '<div class="detail-section__label">' + s.label + '</div>' +
+          '<div class="detail-section__body">' + s.body + '</div>' +
+        '</div>';
+      }).join('');
+      var bulletsHtml = play.procedure.bullets.map(function(b) {
+        return '<li><strong>' + b.bold + '</strong> ' + b.text + '</li>';
+      }).join('');
+      var isCompleted = playId.startsWith('comp-');
+      var isInProgress = playId.startsWith('ip-');
+      var progressHtml = '';
+      if (isInProgress) {
+        var pct = play.progress || 0;
+        var barColor = pct >= 60 ? 'var(--metric-green)' : 'var(--amber)';
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: ' + pct + '%; background: ' + barColor + ';"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: ' + barColor + ';">' + pct + '% Complete</div>' +
+          '</div>';
+      } else if (isCompleted) {
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: 100%; background: var(--metric-green);"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: var(--metric-green);">100% Complete</div>' +
+          '</div>';
+      }
+      var procedureHtml =
+        '<div class="procedure-block">' +
+          '<div class="procedure-block__header">' +
+            '<div class="procedure-block__icon">' + ICON_ROCKET + '</div>' +
+            '<span class="procedure-block__label">Recommended Strategic Play</span>' +
+          '</div>' +
+          '<div class="procedure-block__title">' + play.procedure.title + '</div>' +
+          '<ul class="procedure-block__list">' + bulletsHtml + '</ul>' +
+          '<div class="procedure-block__cost">Cost: ' + play.procedure.cost + '</div>' +
+          (!(isInProgress || isCompleted) ?
+            '<div class="procedure-block__actions">' +
+              '<button class="btn btn--primary" onclick="handleLaunch(\'' + playId + '\')">' + ICON_LAUNCH_SM + ' Launch Play</button>' +
+              '<button class="btn btn--ghost" onclick="handleDismiss(\'' + playId + '\')">' + ICON_X_SM + ' Dismiss</button>' +
+            '</div>' +
+            '<div id="demo-notice-area"></div>'
+          : '') +
+        '</div>';
+      var bottomHtml = (isInProgress || isCompleted) ? procedureHtml + progressHtml : procedureHtml;
+      var html =
+        '<div class="detail-header">' +
+          '<div class="detail-header__icon">' + play.sourceIcon + '</div>' +
+          '<span class="detail-header__source">' + play.source + '</span>' +
+          '<span class="badge ' + play.priorityClass + ' detail-header__priority">' + (isCompleted || isInProgress ? '' : 'Priority: ') + play.priority + '</span>' +
+        '</div>' +
+        '<div class="detail-title">' + play.title + '</div>' +
+        '<div class="detail-query-box">' + play.query + '</div>' +
+        sectionsHtml + bottomHtml;
+      document.getElementById('detail-panel').innerHTML = html;
+    }
+
+    var currentSelected = 'rec-1';
+    var unreadCount = 2;
+
+    function selectPlay(playId, element) {
+      document.querySelectorAll('.play-item.selected, .play-item-ip.selected, .play-item-completed.selected').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      if (element.classList.contains('play-item') && !element.classList.contains('read')) {
+        element.classList.add('read');
+        unreadCount = Math.max(0, unreadCount - 1);
+        document.getElementById('unread-count').textContent = unreadCount;
+        if (unreadCount > 0) {
+          document.getElementById('recommended-badge').textContent = unreadCount + ' new';
+        } else {
+          document.getElementById('recommended-badge').textContent = '0 new';
+          var pulse = document.getElementById('unread-pulse');
+          if (pulse) pulse.style.display = 'none';
+        }
+      }
+      currentSelected = playId;
+      renderDetail(playId);
+    }
+
+    document.querySelectorAll('.play-item').forEach(function(el) {
+      el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+    });
+    document.querySelectorAll('.play-item-ip').forEach(function(el) {
+      el.addEventListener('click', function() {
+        document.querySelectorAll('.play-item.selected, .play-item-completed.selected, .play-item-ip.selected').forEach(function(s) {
+          s.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        currentSelected = el.dataset.playId;
+        renderDetail(el.dataset.playId);
+      });
+    });
+    function bindCompletedPlays() {
+      document.querySelectorAll('.play-item-completed').forEach(function(el) {
+        if (el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+      });
+    }
+    var toggleLink = document.getElementById('toggle-completed');
+    var completedSection = document.getElementById('completed-section');
+    var completedVisible = false;
+    toggleLink.addEventListener('click', function() {
+      completedVisible = !completedVisible;
+      if (completedVisible) {
+        completedSection.classList.add('visible');
+        toggleLink.textContent = 'Hide completed plays';
+        bindCompletedPlays();
+      } else {
+        completedSection.classList.remove('visible');
+        toggleLink.textContent = 'Show 3 completed plays';
+      }
+    });
+
+    function showDemoNotice(message) {
+      var area = document.getElementById('demo-notice-area');
+      if (!area) return;
+      var existing = area.querySelector('.demo-notice');
+      if (existing) existing.remove();
+      var notice = document.createElement('div');
+      notice.className = 'demo-notice';
+      notice.textContent = message;
+      area.appendChild(notice);
+    }
+    function handleLaunch(playId) {
+      showDemoNotice('This is a demo. In the live platform, this would launch the play and deduct credits from your balance.');
+    }
+    function handleDismiss(playId) {
+      showDemoNotice('This is a demo. In the live platform, this play would be dismissed and moved to your archive.');
+    }
+
+    renderDetail('rec-1');
+  </script>
+</body>
+</html>

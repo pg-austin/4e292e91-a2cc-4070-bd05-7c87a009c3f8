@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategic Plays Dashboard | Pinnacle Orthopaedics</title>
+
+  <!-- Google Fonts: Roboto 400, 500 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-page: #0e1520;
+      --bg-card: #1a2838;
+      --border: #283848;
+      --border-selected: #4e9df7;
+      --text-muted: #6b7a8d;
+      --text-body: #8a99ab;
+      --metric-red: #ef6a5e;
+      --metric-green: #36d399;
+      --metric-blue: #4e9df7;
+      --metric-purple: #8b5cf6;
+      --amber: #f7a600;
+      --btn-primary: #00529b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: auto; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-page); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-page); }
+    body { background: var(--bg-page); color: #e2e8f0; font-family: 'Roboto', sans-serif; font-weight: 400; font-size: 14px; line-height: 1.5; padding: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px 16px; text-align: center; position: relative; }
+    .stat-card__value { font-size: 52px; font-weight: 500; line-height: 1.1; margin-bottom: 4px; }
+    .stat-card__label { font-size: 16px; font-weight: 500; color: #e2e8f0; margin-bottom: 2px; }
+    .stat-card__subtitle { font-size: 13px; color: var(--text-muted); }
+    .pulse-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--metric-red); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 106, 94, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(239, 106, 94, 0); } }
+    .dashboard { display: flex; gap: 24px; align-items: flex-start; }
+    .col-left { width: 40%; min-width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 24px; }
+    .col-right { flex: 1; min-width: 0; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-header__title { font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+    .count-pill { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 12px; line-height: 1.4; }
+    .count-pill--blue { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .count-pill--red { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .play-item-ip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .play-item-ip:hover { border-color: var(--text-muted); }
+    .play-item-ip.selected { border-color: var(--border-selected); }
+    .play-item-ip__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .play-item-ip__title { font-size: 14px; font-weight: 500; color: #e2e8f0; }
+    .play-item-ip__pct { font-size: 13px; font-weight: 500; }
+    .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .progress-bar__fill { height: 100%; border-radius: 2px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    .play-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+    .play-item:hover { border-color: var(--text-muted); }
+    .play-item.selected { border-color: var(--border-selected); }
+    .play-item.read .play-item__title { color: var(--text-body); }
+    .play-item__unread-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--metric-red); }
+    .play-item.read .play-item__unread-dot { display: none; }
+    .play-item__title { font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 6px; padding-right: 20px; }
+    .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge--source { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .badge--critical { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .badge--medium { background: rgba(247, 166, 0, 0.12); color: var(--amber); }
+    .badge--credits { background: rgba(54, 211, 153, 0.12); color: var(--metric-green); }
+    .badge--procedure { background: rgba(139, 92, 246, 0.12); color: var(--metric-purple); }
+    .toggle-link { display: inline-block; font-size: 13px; color: var(--metric-blue); cursor: pointer; margin-top: 4px; user-select: none; }
+    .toggle-link:hover { text-decoration: underline; }
+    .completed-section { display: none; margin-top: 12px; }
+    .completed-section.visible { display: block; }
+    .play-item-completed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; opacity: 0.6; transition: opacity 0.15s, border-color 0.15s; position: relative; }
+    .play-item-completed:hover { opacity: 0.85; border-color: var(--text-muted); }
+    .play-item-completed.selected { border-color: var(--border-selected); opacity: 0.85; }
+    .play-item-completed__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .play-item-completed__check { color: var(--metric-green); font-size: 14px; flex-shrink: 0; }
+    .play-item-completed__title { font-size: 14px; font-weight: 500; color: var(--text-body); }
+    .play-item-completed__outcome { font-size: 12px; color: var(--metric-green); margin-left: 22px; }
+    .detail-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+    .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .detail-header__icon { width: 28px; height: 28px; flex-shrink: 0; }
+    .detail-header__source { font-size: 13px; font-weight: 500; color: var(--text-body); }
+    .detail-header__priority { margin-left: auto; }
+    .detail-title { font-size: 20px; font-weight: 500; color: #e2e8f0; margin-bottom: 16px; }
+    .detail-query-box { background: var(--bg-page); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-body); margin-bottom: 20px; font-style: italic; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-section__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #e2e8f0; margin-bottom: 6px; }
+    .detail-section__body { font-size: 14px; color: var(--text-body); line-height: 1.6; }
+    .hl-green { background: rgba(54, 211, 153, 0.1); color: var(--metric-green); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .hl-blue { background: rgba(78, 157, 247, 0.1); color: var(--metric-blue); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .procedure-block { background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .procedure-block__header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .procedure-block__icon { width: 22px; height: 22px; flex-shrink: 0; }
+    .procedure-block__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .procedure-block__title { font-size: 18px; font-weight: 500; color: #e2e8f0; margin-bottom: 14px; }
+    .procedure-block__list { list-style: none; margin-bottom: 14px; }
+    .procedure-block__list li { font-size: 13px; color: var(--text-body); line-height: 1.7; padding-left: 16px; position: relative; }
+    .procedure-block__list li::before { content: "•"; position: absolute; left: 0; color: var(--text-muted); }
+    .procedure-block__list li strong { color: #e2e8f0; font-weight: 500; }
+    .procedure-block__cost { font-size: 14px; font-weight: 500; color: var(--metric-green); margin-bottom: 16px; }
+    .procedure-block__actions { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; font-family: 'Roboto', sans-serif; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn--primary { background: var(--btn-primary); color: #ffffff; }
+    .btn--ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .detail-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+    .demo-banner { background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.25); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .demo-banner__icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--amber); }
+    .demo-banner__content { flex: 1; }
+    .demo-banner__title { font-size: 14px; font-weight: 500; color: var(--amber); margin-bottom: 4px; }
+    .demo-banner__text { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+    .demo-notice { margin-top: 12px; padding: 10px 14px; background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.2); border-radius: 6px; font-size: 12px; color: var(--amber); line-height: 1.5; animation: fadeInNotice 0.3s ease; }
+    @keyframes fadeInNotice { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .play-item__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .play-item__meta-left { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .play-item__meta-right { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+    .detail-progress { margin-top: 24px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .detail-progress__label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+    .detail-progress__bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .detail-progress__fill { height: 100%; border-radius: 4px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    @keyframes fillBar { from { width: 0; } }
+    .detail-progress__pct { font-size: 14px; font-weight: 500; text-align: right; }
+  </style>
+</head>
+<body>
+
+  <div class="demo-banner">
+    <div class="demo-banner__icon">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+    </div>
+    <div class="demo-banner__content">
+      <div class="demo-banner__title">Demo Mode Active</div>
+      <div class="demo-banner__text">This is a demonstration of the Patient Genius platform built using Pinnacle Orthopaedics' market data across the Cobb, Cherokee, and Paulding county footprint. Strategic plays, competitor analysis, and recommendations shown here are illustrative of how the system surfaces opportunities mid-engagement. Year-two plays focus on extending wins from year one and exploiting Pinnacle's scarce-skill differentiators (hip arthroscopy, limb lengthening, the orthopedic urgent care), not foundational rebuilds.</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="pulse-dot" id="unread-pulse"></div>
+      <div class="stat-card__value" style="color: var(--metric-red);" id="unread-count">2</div>
+      <div class="stat-card__label">Unread Opportunities</div>
+      <div class="stat-card__subtitle">New plays to review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-green);">264</div>
+      <div class="stat-card__label">Credits Remaining</div>
+      <div class="stat-card__subtitle">Year 2 Allocation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-blue);">47.2</div>
+      <div class="stat-card__label">Million Data Points</div>
+      <div class="stat-card__subtitle">Cobb/Cherokee/Paulding, 14 Months</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-purple);">11</div>
+      <div class="stat-card__label">Next Strategy Session</div>
+      <div class="stat-card__subtitle">May 10, 2026</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+
+    <div class="col-left">
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">In Progress</span>
+          <span class="count-pill count-pill--blue">3</span>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-1">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Blog/News Hub Build</span>
+            <span class="play-item-ip__pct" style="color: var(--amber);">50%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 50%; background: var(--amber);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-2">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Orthopedic Urgent Care Discoverability</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">78%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 78%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-3">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Provider Page Schema Deployment</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">66%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 66%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">Opportunities</span>
+          <span class="count-pill count-pill--red" id="recommended-badge">2 new</span>
+        </div>
+
+        <div class="play-item selected" data-play-id="rec-1" id="play-rec-1">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">URL Hierarchy Restructure: /locations/ + /services/</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">46 Credits</span>
+              <span class="badge badge--procedure">Site Architecture</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item" data-play-id="rec-2" id="play-rec-2">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Hip Arthroscopy Authority Hub (Bilotta)</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">AI LLM Tracker</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">36 Credits</span>
+              <span class="badge badge--procedure">Authority Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-3" id="play-rec-3">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">OrthoAtlanta Marietta Office Ranking Push</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Competitive Intel</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">26 Credits</span>
+              <span class="badge badge--procedure">Defensive Push</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-4" id="play-rec-4">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Limb Lengthening / Deformity Niche Capture</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">22 Credits</span>
+              <span class="badge badge--procedure">Greenfield Capture</span>
+            </div>
+          </div>
+        </div>
+
+        <span class="toggle-link" id="toggle-completed">Show 3 completed plays</span>
+
+        <div class="completed-section" id="completed-section">
+          <div class="play-item-completed" data-play-id="comp-1">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Q1 GBP Optimization: 6 Locations</span>
+            </div>
+            <div class="play-item-completed__outcome">+36% direction requests across Cobb/Cherokee/Paulding offices</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-2">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Wellstar Citation Hygiene Audit</span>
+            </div>
+            <div class="play-item-completed__outcome">NAP reconciled across Wellstar directory + 6 Pinnacle GBPs</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-3">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">North Atlanta Competitive Landscape Refresh</span>
+            </div>
+            <div class="play-item-completed__outcome">17 corridor competitors mapped (Resurgens excluded as UMP)</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var ICON_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="#2db5b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.5"/><circle cx="15" cy="14" r="1.5"/><path d="M12 2v4"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>';
+    var ICON_RADAR = '<svg viewBox="0 0 24 24" fill="none" stroke="#4e9df7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>';
+    var ICON_AUDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#f7a600" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>';
+    var ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+    var ICON_LAUNCH_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1h6v6"/><path d="M13 1L6 8"/><path d="M11 8v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/></svg>';
+    var ICON_X_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3L3 11"/><path d="M3 3l8 8"/></svg>';
+    var ICON_GBP = '<svg viewBox="0 0 24 24" fill="none" stroke="#36d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    var ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef6a5e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    var ICON_CODE = '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>';
+
+    var PLAYS = {
+
+      "rec-1": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "URL Hierarchy Restructure: /locations/ + /services/",
+        query: 'site architecture audit for pinnacle-ortho.com — flat URL structure (/marietta-office, /jessica-bilotta-md, /our-team) limiting topical clustering and crawler entity grouping',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Pinnacle\'s WordPress site currently runs a <span class="hl-green">flat URL structure</span>: location pages live at <span class="hl-green">/marietta-office</span>, <span class="hl-green">/woodstock-office</span>, and <span class="hl-green">/hiram-office</span>; provider pages at <span class="hl-green">/jessica-bilotta-md</span>, <span class="hl-green">/trevor-starnes-md</span>, etc.; and procedures sit either as flat URLs or buried under generic specialty pages with no <span class="hl-green">/services/[procedure]</span> hierarchy at all. Across <span class="hl-green">6 office URLs</span>, <span class="hl-green">16 provider URLs</span>, and roughly <span class="hl-green">28 procedure-related URLs</span>, the model detects no parent-child crawl path and weak topical clustering signals.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Every external competitor on the corridor — <span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span> (orthoatlanta.com), <span class="hl-blue">Wellstar Orthopedics &amp; Sports Medicine</span> (wellstar.org), and <span class="hl-blue">Northside Hospital Orthopedic Institute</span> (sportsmedicine.northside.com) — uses proper <span class="hl-green">/locations/[city]/</span> and <span class="hl-green">/services/[procedure]/</span> hierarchies that group entities for crawlers and AI extractors. Pinnacle\'s flat structure costs ranking on commercial-intent queries even where the practice is over-credentialed: O. Scott Swayze\'s and John Day\'s pages, the Pinnacle Surgery Center Woodstock ASC, and the orthopedic urgent care all sit at top-level URLs with no parent containers grouping them. The bottleneck is structural, not content.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Restructure to a clean two-tier hierarchy: <span class="hl-green">/locations/marietta/</span>, <span class="hl-green">/locations/east-cobb/</span>, <span class="hl-green">/locations/woodstock/</span>, <span class="hl-green">/locations/canton/</span>, <span class="hl-green">/locations/hiram/</span>, plus <span class="hl-green">/services/[procedure]/</span> for the procedure library. Build <span class="hl-green">301 redirect chains</span> from every legacy flat URL, rewrite internal links across the site, update XML sitemaps, and submit fresh canonical structure to Search Console. Forecasted: <span class="hl-green">+18-24 keyword positions recovered</span> across location and procedure terms within 90 days, plus a foundational unblock for the hip arthroscopy and limb lengthening hubs that depend on a clean /services/ container.'
+          }
+        ],
+        procedure: {
+          title: "Site Architecture",
+          bullets: [
+            { bold: "Audit &amp; Map:", text: "Full inventory of 50+ flat URLs (locations, providers, services) with target hierarchy mapping. Define canonical /locations/[city] and /services/[procedure] structure." },
+            { bold: "WordPress Restructure:", text: "Implement permalink changes via WordPress admin and .htaccess. Update internal navigation, breadcrumbs, and footer link blocks across the site." },
+            { bold: "301 Redirect Chain:", text: "Deploy single-hop 301 redirects from every legacy URL to its new canonical home. Validate via Screaming Frog and Search Console URL inspection." },
+            { bold: "Schema &amp; Sitemap:", text: "Update LocalBusiness schema on all 6 location pages with new URLs. Refresh XML sitemap, submit to Search Console, and request indexing on the new structure." },
+            { bold: "Validation:", text: "60-day rank monitoring across 40 priority keywords, plus crawl-budget and link-equity verification." }
+          ],
+          cost: "46 Credits"
+        }
+      },
+
+      "rec-2": {
+        source: "AI LLM Tracker",
+        sourceIcon: ICON_ROBOT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Hip Arthroscopy Authority Hub (Bilotta)",
+        query: 'AI Overview citation tracking and authority signal mapping for "hip arthroscopy Atlanta," "FAI surgery Atlanta," and 9 related rare-skill hip preservation queries',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Dr. <span class="hl-green">Jessica C. Bilotta</span> is one of the few hip arthroscopy surgeons in metro Atlanta — a genuinely scarce sub-specialty within sports medicine. The model tracks <span class="hl-green">11 hip arthroscopy and hip preservation queries</span> across the Atlanta SERP and Pinnacle currently ranks for <span class="hl-green">3 of 11</span>, with no dedicated procedure page. Bilotta\'s provider page mentions hip arthroscopy in passing; there is no <span class="hl-green">FAI / labral repair / hip preservation hub</span> on the site at all. AI Visibility on these queries sits at <span class="hl-green">38/100</span> with citations going almost entirely to generic Atlanta sports medicine clinics and one out-of-market academic hospital.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is the cleanest greenfield in the audit. <span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span>, <span class="hl-blue">Wellstar Orthopedics</span>, and <span class="hl-blue">Northside Sports Medicine</span> do not list a hip arthroscopy specialist on the corridor. Bilotta has the credential, performs the procedure routinely, and is the natural authority — but the site is not telling crawlers or AI engines that. A scarce-skill query is exactly the kind of authority signal AI Overview models reward when they can lift it cleanly: physician name, fellowship, procedure name, candidacy criteria, and structured Q&amp;A all present on a single page. The fix is one cornerstone hub plus three supporting articles. The competitive moat is structural — competitors literally cannot match it without hiring a hip arthroscopist.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a <span class="hl-green">hip arthroscopy authority hub</span> (1,800+ words) anchored on Dr. Bilotta with full <span class="hl-green">Physician + MedicalProcedure + FAQPage</span> schema, candidacy criteria, FAI and labral repair coverage, recovery timeline, and surgeon attribution throughout. Pair with three supporting articles (FAI vs. labral tear, hip preservation candidacy, recovery week-by-week). Forecasted: capture <span class="hl-green">positions #1-3</span> for "hip arthroscopy Atlanta" and 7 of 11 tracked queries within 75 days, plus AI Overview citation recovery on the rare-skill terms competitors cannot defend. This page should sit at <span class="hl-green">/services/hip-arthroscopy/</span> on the new architecture (depends on rec-1).'
+          }
+        ],
+        procedure: {
+          title: "Authority Build",
+          bullets: [
+            { bold: "Cornerstone Hub:", text: "1,800+ word hip arthroscopy page anchored on Dr. Bilotta. Cover FAI surgery, labral repair, hip preservation, and candidacy criteria. Full Physician + MedicalProcedure + FAQPage schema." },
+            { bold: "Supporting Cluster:", text: "3 articles: FAI vs. labral tear distinction, hip preservation candidacy self-assessment, recovery week-by-week from a hip arthroscopy patient perspective. All Bilotta-bylined and interlinked." },
+            { bold: "Schema &amp; AI Lift:", text: "Q&amp;A blocks structured for AI Overview lift — candidacy questions, recovery questions, comparison-style content. Surgeon attribution exposed in every entity." },
+            { bold: "Digital PR:", text: "Outreach to 4 Atlanta-area health and fitness publications anchoring the scarce-skill angle. Targeted on hip-pain-active-adult intent (runners, cyclists, CrossFit demographic)." },
+            { bold: "Validation:", text: "Daily AI Overview tracking across 11 hip arthroscopy queries plus 8 long-tail variants for 75 days post-deployment." }
+          ],
+          cost: "36 Credits"
+        }
+      },
+
+      "rec-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "OrthoAtlanta Marietta Office Ranking Push",
+        query: 'competitive ranking analysis for the Marietta and Woodstock SERPs where Piedmont Orthopedics | OrthoAtlanta has expanded post-merger, sitting on top of Pinnacle territory',
+        sections: [
+          {
+            label: "The Data",
+            body: '<span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span> now operates <span class="hl-green">25 locations</span> across metro Atlanta following the merger, with offices in <span class="hl-green">Marietta, Woodstock, and Austell</span> sitting directly on top of Pinnacle\'s footprint. Over the past 60 days the model has detected OrthoAtlanta moving up <span class="hl-green">+4 to +9 positions</span> across <span class="hl-green">14 commercial-intent queries</span> in Pinnacle\'s home market, including "orthopedic surgeon Marietta GA," "hip replacement Marietta," "knee replacement Marietta GA," and "sports medicine Marietta." Their schema, content depth, and review volume are all materially ahead of Pinnacle on a per-page basis.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'OrthoAtlanta\'s investment is real and structural — they are publishing weekly, their procedure pages are 1,400-1,900 words with full schema, and the merger has consolidated link equity across the combined network. Pinnacle\'s defense is the <span class="hl-green">Wellstar Kennestone clinical affiliation</span>, the <span class="hl-green">Pinnacle Surgery Center Woodstock</span> ASC (AAAHC-accredited, opened 2011), and decades of community presence — but those signals are barely surfaced on the site. The model flags this as a <span class="hl-green">defensive priority</span>: not chasing OrthoAtlanta on every term, but reinforcing the Marietta and Woodstock home-court advantages where Pinnacle still leads on EEAT and authority but is being out-published.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Targeted Marietta + Woodstock home-court reinforcement: refresh both location pages to 1,200+ words with surgeon rosters (name Day, Swayze, Starnes, Bilotta, Bonnaig where applicable), embed the Wellstar Kennestone affiliation prominently, surface the Woodstock ASC, and add structured FAQ blocks targeting the 14 affected queries. Pair with <span class="hl-green">8 GBP posts</span> per location across the 60-day defense window. Forecasted: <span class="hl-green">hold position</span> on 9-11 of the 14 queries and reverse <span class="hl-green">3-5 positions</span> already lost, with sustained protection through the OrthoAtlanta integration cycle.'
+          }
+        ],
+        procedure: {
+          title: "Defensive Push",
+          bullets: [
+            { bold: "Location Page Refresh:", text: "Expand /locations/marietta and /locations/woodstock to 1,200+ words with full surgeon rosters, Wellstar Kennestone affiliation, ASC mention, and structured FAQ blocks." },
+            { bold: "Schema &amp; Authority:", text: "LocalBusiness + MedicalOrganization + Physician schema with affiliation entities. AAAHC accreditation surfaced as authority signal on Woodstock." },
+            { bold: "GBP Defense:", text: "Weekly Google Business Profile posts on the Marietta and Woodstock profiles for 60 days — surgeon spotlights, ASC procedures, urgent care availability." },
+            { bold: "Tracking:", text: "Daily SERP monitoring across 14 affected queries plus 6 OrthoAtlanta-overlap variants for 90 days." }
+          ],
+          cost: "26 Credits"
+        }
+      },
+
+      "rec-4": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Limb Lengthening / Deformity Niche Capture",
+        query: 'keyword opportunity analysis for "limb lengthening Atlanta," "deformity correction Georgia," and 11 related ultra-niche orthopedic queries with near-zero SERP competition',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Pinnacle\'s <span class="hl-green">Limb Lengthening &amp; Deformity Repair</span> sub-specialty is genuinely uncommon in the metro Atlanta market — the model finds <span class="hl-green">no direct competitor</span> on the corridor offering it as a named service line. Search volume for "limb lengthening Atlanta" is modest but rising (<span class="hl-green">+28% YoY</span>), and 11 long-tail queries (deformity correction Georgia, leg length discrepancy Atlanta, Ilizarov Atlanta, PRECICE nail Atlanta, bone lengthening surgery Georgia) collectively register <span class="hl-green">~640 monthly searches</span> with <span class="hl-green">essentially zero authoritative pages</span> in the SERP. Pinnacle currently has one specialty bullet mentioning the service.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is pure greenfield. <span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span>, <span class="hl-blue">Wellstar Orthopedics</span>, and <span class="hl-blue">Northside Hospital Orthopedic Institute</span> do not list limb lengthening as a service line. The closest competitive page is an academic hospital reference page that ranks despite being two clicks deep and lightly optimized. The traffic ceiling is moderate (this is a niche intervention, not a high-volume elective), but the conversion economics are extraordinary: limb lengthening patients travel, the procedure is high-margin, and the search intent is aggressively bottom-funnel. A single well-built page could own this category for the foreseeable future with minimal ongoing investment. Pinnacle should also build modest authority on <span class="hl-green">leg length discrepancy</span> and <span class="hl-green">Ilizarov / PRECICE technique</span> long-tails.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a <span class="hl-green">limb lengthening &amp; deformity repair hub</span> (1,400-1,600 words) with full procedure detail, candidacy criteria, technique coverage (Ilizarov, PRECICE intramedullary nail, external fixation), recovery, and travel-patient logistics. Add 2 supporting articles (leg length discrepancy diagnosis, choosing between techniques). Forecasted: <span class="hl-green">positions #1-2</span> on most of the 11 tracked queries within 90 days and a defensible niche moat. This page lives at <span class="hl-green">/services/limb-lengthening/</span> on the new architecture (depends on rec-1).'
+          }
+        ],
+        procedure: {
+          title: "Greenfield Capture",
+          bullets: [
+            { bold: "Cornerstone Page:", text: "1,400-1,600 word limb lengthening hub with technique coverage (Ilizarov, PRECICE, external fixation), candidacy criteria, recovery timeline, and travel-patient information." },
+            { bold: "Supporting Articles:", text: "2 pieces: leg length discrepancy diagnostic guide, technique comparison (Ilizarov vs. PRECICE intramedullary nail). Both interlinked with the cornerstone." },
+            { bold: "Schema:", text: "MedicalProcedure + FAQPage + Physician schema with full technique entity coverage. Candidacy and outcome questions exposed for AI Overview lift." },
+            { bold: "Light Promotion:", text: "Niche outreach to 2 patient-advocacy and rare-condition publications. No paid amplification needed — organic ceiling is sufficient given competitive density." }
+          ],
+          cost: "22 Credits"
+        }
+      },
+
+      "ip-1": {
+        source: "Content Strategy",
+        sourceIcon: ICON_AUDIT,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Blog/News Hub Build",
+        progress: 50,
+        query: "build a blog and news hub from scratch on pinnacle-ortho.com — currently no blog exists, with provider-bylined content engine targeting topical authority across 8 sub-specialties",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Pinnacle currently has <span class="hl-green">no blog and no news hub</span> on the site at all. Phase 1 (architecture, editorial calendar, surgeon byline workflow) is complete. Phase 2 (initial content production) is in progress: <span class="hl-green">9 of 18</span> launch articles drafted and in surgeon review, covering joint replacement, sports medicine, foot &amp; ankle, hand, and the orthopedic urgent care. Editorial cadence is set at <span class="hl-green">2 posts per week</span> at full ramp, with rotating surgeon attribution across the 16-physician roster.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is foundational topical-authority infrastructure that every external competitor already has. <span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span> publishes weekly. <span class="hl-blue">Wellstar Orthopedics</span> and <span class="hl-blue">Northside Sports Medicine</span> both maintain active content engines. Pinnacle\'s absence has cost ranking on procedure-adjacent informational queries for years. The model is flagging that even before launch, the surgeon-byline workflow is producing material differentiation: Day on joint replacement, Starnes on hand and elbow, Bilotta on hip arthroscopy, Bonnaig on sports medicine — each piece carries authority signals competitors cannot match without their own surgeon roster.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Remaining 9 launch articles in production with deployment <span class="hl-green">3-4 weeks</span> out. Once live, the hub feeds the hip arthroscopy authority play (rec-2), the limb lengthening capture (rec-4), and supports the orthopedic urgent care discoverability work (ip-2). Year-2 forecast: <span class="hl-green">+540 monthly organic visits</span> from the blog by Q4, with significant compounding into Q1 2027.'
+          }
+        ],
+        procedure: {
+          title: "Blog/News Hub Build",
+          bullets: [
+            { bold: "Completed:", text: "Hub architecture, editorial calendar, surgeon byline workflow, 9 of 18 launch articles drafted" },
+            { bold: "In Progress:", text: "Surgeon review on 9 drafts, production on remaining 9 (50% overall)" },
+            { bold: "Next:", text: "Complete launch batch, deploy hub at /blog/, activate 2-posts-per-week cadence with rotating surgeon bylines across 16 physicians" }
+          ],
+          cost: "32 Credits (allocated)"
+        }
+      },
+
+      "ip-2": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Orthopedic Urgent Care Discoverability",
+        progress: 78,
+        query: "discoverability and conversion optimization for Pinnacle's orthopedic urgent care — walk-in service with on-site X-ray and MRI, a real differentiator in the corridor",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Pinnacle\'s <span class="hl-green">Orthopedic Urgent Care</span> is a genuine differentiator: walk-in availability with <span class="hl-green">on-site X-ray + MRI</span> capability, no appointment needed for acute injuries. The play has deployed dedicated urgent care landing pages, <span class="hl-green">UrgentCare schema</span>, GBP service tagging, and paid search amplification across high-intent injury queries. <span class="hl-green">"Orthopedic urgent care Marietta"</span> moved from <span class="hl-green">position #6 to #2</span> in 8 weeks. <span class="hl-green">"Sports injury walk-in Marietta"</span> moved from unranked to <span class="hl-green">position #4</span>.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Performance is tracking well ahead of forecast. The orthopedic urgent care narrative cleanly differentiates Pinnacle from <span class="hl-blue">Wellstar Orthopedics</span> (which routes acute injuries through ER or scheduled appointments) and from <span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span> (which has urgent care at fewer than half their Atlanta locations). Same-day appointments + on-site imaging is a top-funnel magnet for sports injuries, fall injuries, and post-MVA presentations. The 78% completion reflects landing pages live, schema deployed, GBP tagging in place, and paid amplification running; remaining work is the conversion optimization layer (online check-in widget, wait-time disclosure, post-visit follow-up sequence).'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Remaining 22% scoped for completion in 2-3 weeks: deploy the online check-in widget on each location page, expose live or estimated wait time in GBP and on-page, and wire the post-visit follow-up to the appointment scheduling system. Once complete, expect a measurable lift in conversion rate on urgent care landing pages and additional GBP profile actions across all 6 offices.'
+          }
+        ],
+        procedure: {
+          title: "Orthopedic Urgent Care Discoverability",
+          bullets: [
+            { bold: "Completed:", text: "Dedicated urgent care landing pages, UrgentCare + MedicalClinic schema, GBP service tagging across all 6 locations, paid search active" },
+            { bold: "In Progress:", text: "Online check-in widget, wait-time disclosure on GBP and on-page, post-visit follow-up sequence (78% overall)" },
+            { bold: "Next:", text: "Conversion layer deployment, 60-day tracking on lift in landing-page conversion and GBP profile actions" }
+          ],
+          cost: "24 Credits (allocated)"
+        }
+      },
+
+      "ip-3": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Provider Page Schema Deployment",
+        progress: 66,
+        query: "Physician schema and credential signal deployment across 16 surgeon profiles plus PAs/NPs/PTs, with hospital affiliation and fellowship attribution",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (audit, schema architecture, credential intake) is complete. Phase 2 (deployment) is in progress: <span class="hl-green">11 of 16</span> surgeon pages now have full <span class="hl-green">Physician schema</span> with board certifications, fellowships, hospital affiliations, and procedure focus. Average page length on deployed surgeons has moved from <span class="hl-green">280 words</span> to <span class="hl-green">760 words</span>. Pages deployed include <span class="hl-blue">John Day</span> (joints/sports med), <span class="hl-blue">O. Scott Swayze</span> (with Wellstar Health System Board of Trustees past-presidency surfaced), <span class="hl-blue">Trevor T. Starnes</span> (fellowship-trained hand/wrist/elbow/shoulder), <span class="hl-blue">Jessica C. Bilotta</span> (sports med, hip arthroscopy), and <span class="hl-blue">Nicolas S. Bonnaig</span> (sports medicine).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'EEAT density on the deployed surgeon roster has moved from <span class="hl-green">39/100</span> to <span class="hl-green">74/100</span> on the model\'s scoring. Within 30 days of deployment, <span class="hl-green">4 surgeons</span> gained Knowledge Panel eligibility on branded surgeon-name searches; Bilotta in particular saw her page surfaced in AI Overview responses for "hip arthroscopy Atlanta" — feeding directly into the rec-2 authority play. The Wellstar Kennestone affiliation entity now appears on every deployed Physician schema, reinforcing the broader Wellstar relationship across the practice.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Remaining 5 surgeon pages scoped for deployment in 2-3 weeks. After completion, all 16 physicians will have full schema and 700+ word pages. PAs, NPs, and PTs will receive a lighter version of the same treatment in Q3. Once complete, the practice has the EEAT foundation to support the hip arthroscopy hub (rec-2), the limb lengthening capture (rec-4), and any future procedure-page schema rollout.'
+          }
+        ],
+        procedure: {
+          title: "Provider Page Schema Deployment",
+          bullets: [
+            { bold: "Completed:", text: "Schema architecture, credential intake on full 16-surgeon roster, deployment on 11 of 16 surgeon pages including Day, Swayze, Starnes, Bilotta, Bonnaig" },
+            { bold: "In Progress:", text: "Final 5 surgeon pages in physician review (66% overall)" },
+            { bold: "Next:", text: "Complete remaining 5 deployments, PA/NP/PT light treatment scheduled for Q3, ongoing Knowledge Panel monitoring" }
+          ],
+          cost: "20 Credits (allocated)"
+        }
+      },
+
+      "comp-1": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Q1 GBP Optimization: 6 Locations",
+        query: "Google Business Profile refresh across all 6 Pinnacle Orthopaedics offices spanning Cobb, Cherokee, and Paulding counties",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed all 6 Pinnacle Google Business Profiles in February-March: corrected primary categories on each, expanded service descriptions with sub-specialty coverage, deployed photo updates from a coordinated practice shoot covering Marietta HQ (300 Tower Road NE, adjacent to Wellstar Kennestone), East Cobb (3747 Roswell Rd NE), Woodstock (1505 Stone Bridge Pkwy + the ASC), Canton (720 Transit Ave), Hiram (144 Bill Carruth Pkwy), and the second Marietta address (1121/1211 Johnson Ferry Rd). Refreshed Q&amp;A seeding and added structured posts for Q2 priorities (orthopedic urgent care, hip arthroscopy, joint replacement).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Across all 6 locations: <span class="hl-green">+36% direction requests</span>, <span class="hl-blue">+29% profile views</span>, and <span class="hl-green">+21% calls</span> in the 60 days post-deployment. Strongest lifts in <span class="hl-blue">Hiram (+52%)</span> and <span class="hl-blue">Canton (+44%)</span> where prior GBP content had been thinnest and where the Paulding/Cherokee corridor is being contested by <span class="hl-blue">Northside Hospital Orthopedic Institute</span> in Woodstock and Canton. <span class="hl-blue">Marietta HQ</span> saw smaller % gains but the largest absolute volume increase given its anchor presence next to Wellstar Kennestone.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'GBP optimization is now integrated into Pinnacle\'s ongoing care. Weekly post schedule, monthly review response cadence, and quarterly photo refreshes are standardized across all 6 profiles. Next refresh cycle scheduled for July 2026 with priority on continuing to surface the Wellstar Kennestone affiliation, the AAAHC-accredited Woodstock ASC, and the orthopedic urgent care availability.'
+          }
+        ],
+        procedure: {
+          title: "Q1 GBP Optimization: 6 Locations",
+          bullets: [
+            { bold: "Completed:", text: "All 6 profiles fully refreshed: categories, descriptions, photos, Q&amp;A, and Q2 posts on urgent care, hip arthroscopy, and joint replacement" },
+            { bold: "Result:", text: "+36% direction requests, +29% profile views, +21% calls across the 6-office network; strongest lift in Hiram and Canton" },
+            { bold: "Status:", text: "Ongoing maintenance integrated, next refresh July 2026" }
+          ],
+          cost: "16 Credits (spent)"
+        }
+      },
+
+      "comp-2": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Wellstar Citation Hygiene Audit",
+        query: "NAP reconciliation across the Wellstar Health System provider directory (which lists Pinnacle offices) and Pinnacle's own 6 Google Business Profiles to prevent citation conflict",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Pinnacle has a deep <span class="hl-green">Wellstar Kennestone clinical affiliation</span> and <span class="hl-blue">Wellstar</span> lists Pinnacle offices in its provider directory. Pre-audit, the model identified <span class="hl-green">14 NAP inconsistencies</span> across the Wellstar directory entries and Pinnacle\'s own GBPs — primarily formatting drift on suite numbers, abbreviation mismatches (Rd vs. Road, NE vs. Northeast), and one phone number that had been updated on Pinnacle\'s GBP but not on the Wellstar listing. These conflicts fragment local citation authority and create local-pack ambiguity for crawlers.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Citation conflict between an affiliated hospital system\'s directory and the practice\'s own profiles is one of the most common-and-invisible local SEO leaks in a frenemy market. <span class="hl-blue">Wellstar Orthopedics</span> runs its own employed ortho group on the same blocks as Pinnacle, so directory hygiene matters for both clinical referral flow and local-pack disambiguation. Reconciled all 14 NAP discrepancies, confirmed canonical address format with Pinnacle ops, requested updates on the Wellstar directory side, and documented standard format for ongoing entries. Local citation strength score improved from <span class="hl-green">68/100</span> to <span class="hl-green">91/100</span>.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'NAP reconciliation is now standardized into the monthly local SEO maintenance cycle. Wellstar directory updates are tracked alongside the 6 Pinnacle GBPs. This hygiene work was a prerequisite for the URL hierarchy restructure (rec-1) since LocalBusiness schema relies on consistent NAP signals to bind correctly to the new /locations/[city] structure.'
+          }
+        ],
+        procedure: {
+          title: "Wellstar Citation Hygiene Audit",
+          bullets: [
+            { bold: "Completed:", text: "14 NAP inconsistencies reconciled across Wellstar directory and 6 Pinnacle GBPs; canonical address format documented" },
+            { bold: "Result:", text: "Local citation strength 68->91 on the model's score; clean foundation for rec-1 URL restructure" },
+            { bold: "Status:", text: "Monthly maintenance cycle active; Wellstar directory tracked alongside Pinnacle GBPs" }
+          ],
+          cost: "12 Credits (spent)"
+        }
+      },
+
+      "comp-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "North Atlanta Competitive Landscape Refresh",
+        query: "competitor identification and tracking refresh for the Cobb / Cherokee / Paulding corridor — 17 competitors mapped with Resurgens excluded as UMP sister practice",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed Pinnacle\'s competitive tracking set for 2026: <span class="hl-green">17 corridor competitors</span> profiled (up from 12 in 2025) with current location count, surgeon roster, schema implementation, blog cadence, paid search activity, and estimated organic traffic. Full ranking baselines refreshed across <span class="hl-green">2,140 keywords</span>. Tracked set includes <span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span> (25 locations post-merger), <span class="hl-blue">Wellstar Orthopedics &amp; Sports Medicine</span> (the affiliated-but-employed frenemy), <span class="hl-blue">Northside Hospital Orthopedic Institute</span> (with offices at 900 Towne Lake Pkwy Woodstock and 470 Northside Cherokee Blvd Canton), plus 14 smaller corridor practices. <span class="hl-green">Resurgens Orthopaedics excluded</span> per the UMP sister-practice protocol.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Most consequential 2026 findings: <span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span>\'s post-merger Marietta and Woodstock offices are aggressively claiming Pinnacle territory (drove the rec-3 defensive play). <span class="hl-blue">Northside Hospital Orthopedic Institute</span> has built strong content depth and now owns the Cherokee County flank with their Woodstock and Canton offices minutes from Pinnacle\'s. <span class="hl-blue">Wellstar Orthopedics</span> is a structural complication: clinically affiliated through the Wellstar Kennestone relationship but a direct organic search competitor for many procedure queries. None of the 17 competitors has a hip arthroscopy surgeon (validates rec-2) or a limb lengthening service line (validates rec-4).'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Refreshed tracking is now feeding the AI model continuously. All four current opportunity plays (rec-1, rec-2, rec-3, rec-4) are direct outputs of the refreshed competitive view. Tracking will refresh again at end of Q3, with particular attention to OrthoAtlanta integration progress and Northside\'s Cherokee corridor expansion.'
+          }
+        ],
+        procedure: {
+          title: "North Atlanta Competitive Landscape Refresh",
+          bullets: [
+            { bold: "Completed:", text: "17 corridor competitors profiled (Piedmont OrthoAtlanta, Wellstar Orthopedics, Northside Orthopedic Institute, +14); 2,140 keywords baselined; Resurgens excluded as UMP" },
+            { bold: "Result:", text: "4 active opportunity plays generated from the refreshed competitive view" },
+            { bold: "Status:", text: "Continuous monitoring active; next full refresh at end of Q3" }
+          ],
+          cost: "9 Credits (spent)"
+        }
+      }
+    };
+
+    function renderDetail(playId) {
+      var play = PLAYS[playId];
+      if (!play) {
+        document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">Select a play to view details</div>';
+        return;
+      }
+      var sectionsHtml = play.sections.map(function(s) {
+        return '<div class="detail-section">' +
+          '<div class="detail-section__label">' + s.label + '</div>' +
+          '<div class="detail-section__body">' + s.body + '</div>' +
+        '</div>';
+      }).join('');
+      var bulletsHtml = play.procedure.bullets.map(function(b) {
+        return '<li><strong>' + b.bold + '</strong> ' + b.text + '</li>';
+      }).join('');
+      var isCompleted = playId.startsWith('comp-');
+      var isInProgress = playId.startsWith('ip-');
+      var progressHtml = '';
+      if (isInProgress) {
+        var pct = play.progress || 0;
+        var barColor = pct >= 60 ? 'var(--metric-green)' : 'var(--amber)';
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: ' + pct + '%; background: ' + barColor + ';"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: ' + barColor + ';">' + pct + '% Complete</div>' +
+          '</div>';
+      } else if (isCompleted) {
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: 100%; background: var(--metric-green);"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: var(--metric-green);">100% Complete</div>' +
+          '</div>';
+      }
+      var procedureHtml =
+        '<div class="procedure-block">' +
+          '<div class="procedure-block__header">' +
+            '<div class="procedure-block__icon">' + ICON_ROCKET + '</div>' +
+            '<span class="procedure-block__label">Recommended Strategic Play</span>' +
+          '</div>' +
+          '<div class="procedure-block__title">' + play.procedure.title + '</div>' +
+          '<ul class="procedure-block__list">' + bulletsHtml + '</ul>' +
+          '<div class="procedure-block__cost">Cost: ' + play.procedure.cost + '</div>' +
+          (!(isInProgress || isCompleted) ?
+            '<div class="procedure-block__actions">' +
+              '<button class="btn btn--primary" onclick="handleLaunch(\'' + playId + '\')">' + ICON_LAUNCH_SM + ' Launch Play</button>' +
+              '<button class="btn btn--ghost" onclick="handleDismiss(\'' + playId + '\')">' + ICON_X_SM + ' Dismiss</button>' +
+            '</div>' +
+            '<div id="demo-notice-area"></div>'
+          : '') +
+        '</div>';
+      var bottomHtml = (isInProgress || isCompleted) ? procedureHtml + progressHtml : procedureHtml;
+      var html =
+        '<div class="detail-header">' +
+          '<div class="detail-header__icon">' + play.sourceIcon + '</div>' +
+          '<span class="detail-header__source">' + play.source + '</span>' +
+          '<span class="badge ' + play.priorityClass + ' detail-header__priority">' + (isCompleted || isInProgress ? '' : 'Priority: ') + play.priority + '</span>' +
+        '</div>' +
+        '<div class="detail-title">' + play.title + '</div>' +
+        '<div class="detail-query-box">' + play.query + '</div>' +
+        sectionsHtml + bottomHtml;
+      document.getElementById('detail-panel').innerHTML = html;
+    }
+
+    var currentSelected = 'rec-1';
+    var unreadCount = 2;
+
+    function selectPlay(playId, element) {
+      document.querySelectorAll('.play-item.selected, .play-item-ip.selected, .play-item-completed.selected').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      if (element.classList.contains('play-item') && !element.classList.contains('read')) {
+        element.classList.add('read');
+        unreadCount = Math.max(0, unreadCount - 1);
+        document.getElementById('unread-count').textContent = unreadCount;
+        if (unreadCount > 0) {
+          document.getElementById('recommended-badge').textContent = unreadCount + ' new';
+        } else {
+          document.getElementById('recommended-badge').textContent = '0 new';
+          var pulse = document.getElementById('unread-pulse');
+          if (pulse) pulse.style.display = 'none';
+        }
+      }
+      currentSelected = playId;
+      renderDetail(playId);
+    }
+
+    document.querySelectorAll('.play-item').forEach(function(el) {
+      el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+    });
+    document.querySelectorAll('.play-item-ip').forEach(function(el) {
+      el.addEventListener('click', function() {
+        document.querySelectorAll('.play-item.selected, .play-item-completed.selected, .play-item-ip.selected').forEach(function(s) {
+          s.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        currentSelected = el.dataset.playId;
+        renderDetail(el.dataset.playId);
+      });
+    });
+    function bindCompletedPlays() {
+      document.querySelectorAll('.play-item-completed').forEach(function(el) {
+        if (el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+      });
+    }
+    var toggleLink = document.getElementById('toggle-completed');
+    var completedSection = document.getElementById('completed-section');
+    var completedVisible = false;
+    toggleLink.addEventListener('click', function() {
+      completedVisible = !completedVisible;
+      if (completedVisible) {
+        completedSection.classList.add('visible');
+        toggleLink.textContent = 'Hide completed plays';
+        bindCompletedPlays();
+      } else {
+        completedSection.classList.remove('visible');
+        toggleLink.textContent = 'Show 3 completed plays';
+      }
+    });
+
+    function showDemoNotice(message) {
+      var area = document.getElementById('demo-notice-area');
+      if (!area) return;
+      var existing = area.querySelector('.demo-notice');
+      if (existing) existing.remove();
+      var notice = document.createElement('div');
+      notice.className = 'demo-notice';
+      notice.textContent = message;
+      area.appendChild(notice);
+    }
+    function handleLaunch(playId) {
+      showDemoNotice('This is a demo. In the live platform, this would launch the play and deduct credits from your balance.');
+    }
+    function handleDismiss(playId) {
+      showDemoNotice('This is a demo. In the live platform, this play would be dismissed and moved to your archive.');
+    }
+
+    renderDetail('rec-1');
+  </script>
+</body>
+</html>

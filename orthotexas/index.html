@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategic Plays Dashboard | OrthoTexas</title>
+
+  <!-- Google Fonts: Roboto 400, 500 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-page: #0e1520;
+      --bg-card: #1a2838;
+      --border: #283848;
+      --border-selected: #4e9df7;
+      --text-muted: #6b7a8d;
+      --text-body: #8a99ab;
+      --metric-red: #ef6a5e;
+      --metric-green: #36d399;
+      --metric-blue: #4e9df7;
+      --metric-purple: #8b5cf6;
+      --amber: #f7a600;
+      --btn-primary: #00529b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: auto; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-page); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-page); }
+    body { background: var(--bg-page); color: #e2e8f0; font-family: 'Roboto', sans-serif; font-weight: 400; font-size: 14px; line-height: 1.5; padding: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px 16px; text-align: center; position: relative; }
+    .stat-card__value { font-size: 52px; font-weight: 500; line-height: 1.1; margin-bottom: 4px; }
+    .stat-card__label { font-size: 16px; font-weight: 500; color: #e2e8f0; margin-bottom: 2px; }
+    .stat-card__subtitle { font-size: 13px; color: var(--text-muted); }
+    .pulse-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--metric-red); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 106, 94, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(239, 106, 94, 0); } }
+    .dashboard { display: flex; gap: 24px; align-items: flex-start; }
+    .col-left { width: 40%; min-width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 24px; }
+    .col-right { flex: 1; min-width: 0; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-header__title { font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+    .count-pill { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 12px; line-height: 1.4; }
+    .count-pill--blue { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .count-pill--red { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .play-item-ip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .play-item-ip:hover { border-color: var(--text-muted); }
+    .play-item-ip.selected { border-color: var(--border-selected); }
+    .play-item-ip__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .play-item-ip__title { font-size: 14px; font-weight: 500; color: #e2e8f0; }
+    .play-item-ip__pct { font-size: 13px; font-weight: 500; }
+    .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .progress-bar__fill { height: 100%; border-radius: 2px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    .play-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+    .play-item:hover { border-color: var(--text-muted); }
+    .play-item.selected { border-color: var(--border-selected); }
+    .play-item.read .play-item__title { color: var(--text-body); }
+    .play-item__unread-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--metric-red); }
+    .play-item.read .play-item__unread-dot { display: none; }
+    .play-item__title { font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 6px; padding-right: 20px; }
+    .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge--source { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .badge--critical { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .badge--medium { background: rgba(247, 166, 0, 0.12); color: var(--amber); }
+    .badge--credits { background: rgba(54, 211, 153, 0.12); color: var(--metric-green); }
+    .badge--procedure { background: rgba(139, 92, 246, 0.12); color: var(--metric-purple); }
+    .toggle-link { display: inline-block; font-size: 13px; color: var(--metric-blue); cursor: pointer; margin-top: 4px; user-select: none; }
+    .toggle-link:hover { text-decoration: underline; }
+    .completed-section { display: none; margin-top: 12px; }
+    .completed-section.visible { display: block; }
+    .play-item-completed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; opacity: 0.6; transition: opacity 0.15s, border-color 0.15s; position: relative; }
+    .play-item-completed:hover { opacity: 0.85; border-color: var(--text-muted); }
+    .play-item-completed.selected { border-color: var(--border-selected); opacity: 0.85; }
+    .play-item-completed__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .play-item-completed__check { color: var(--metric-green); font-size: 14px; flex-shrink: 0; }
+    .play-item-completed__title { font-size: 14px; font-weight: 500; color: var(--text-body); }
+    .play-item-completed__outcome { font-size: 12px; color: var(--metric-green); margin-left: 22px; }
+    .detail-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+    .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .detail-header__icon { width: 28px; height: 28px; flex-shrink: 0; }
+    .detail-header__source { font-size: 13px; font-weight: 500; color: var(--text-body); }
+    .detail-header__priority { margin-left: auto; }
+    .detail-title { font-size: 20px; font-weight: 500; color: #e2e8f0; margin-bottom: 16px; }
+    .detail-query-box { background: var(--bg-page); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-body); margin-bottom: 20px; font-style: italic; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-section__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #e2e8f0; margin-bottom: 6px; }
+    .detail-section__body { font-size: 14px; color: var(--text-body); line-height: 1.6; }
+    .hl-green { background: rgba(54, 211, 153, 0.1); color: var(--metric-green); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .hl-blue { background: rgba(78, 157, 247, 0.1); color: var(--metric-blue); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .procedure-block { background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .procedure-block__header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .procedure-block__icon { width: 22px; height: 22px; flex-shrink: 0; }
+    .procedure-block__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .procedure-block__title { font-size: 18px; font-weight: 500; color: #e2e8f0; margin-bottom: 14px; }
+    .procedure-block__list { list-style: none; margin-bottom: 14px; }
+    .procedure-block__list li { font-size: 13px; color: var(--text-body); line-height: 1.7; padding-left: 16px; position: relative; }
+    .procedure-block__list li::before { content: "•"; position: absolute; left: 0; color: var(--text-muted); }
+    .procedure-block__list li strong { color: #e2e8f0; font-weight: 500; }
+    .procedure-block__cost { font-size: 14px; font-weight: 500; color: var(--metric-green); margin-bottom: 16px; }
+    .procedure-block__actions { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; font-family: 'Roboto', sans-serif; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn--primary { background: var(--btn-primary); color: #ffffff; }
+    .btn--ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .detail-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+    .demo-banner { background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.25); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .demo-banner__icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--amber); }
+    .demo-banner__content { flex: 1; }
+    .demo-banner__title { font-size: 14px; font-weight: 500; color: var(--amber); margin-bottom: 4px; }
+    .demo-banner__text { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+    .demo-notice { margin-top: 12px; padding: 10px 14px; background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.2); border-radius: 6px; font-size: 12px; color: var(--amber); line-height: 1.5; animation: fadeInNotice 0.3s ease; }
+    @keyframes fadeInNotice { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .play-item__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .play-item__meta-left { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .play-item__meta-right { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+    .detail-progress { margin-top: 24px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .detail-progress__label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+    .detail-progress__bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .detail-progress__fill { height: 100%; border-radius: 4px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    @keyframes fillBar { from { width: 0; } }
+    .detail-progress__pct { font-size: 14px; font-weight: 500; text-align: right; }
+  </style>
+</head>
+<body>
+
+  <div class="demo-banner">
+    <div class="demo-banner__icon">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+    </div>
+    <div class="demo-banner__content">
+      <div class="demo-banner__title">Demo Mode Active</div>
+      <div class="demo-banner__text">This is a demonstration of the Patient Genius platform built using OrthoTexas's market data. Strategic plays, competitor analysis, and recommendations shown here are illustrative of how the system surfaces opportunities mid-engagement. Year-two plays focus on extending wins from year one and converting OrthoTexas's under-promoted differentiators (OrthoNow walk-in clinic, 4-city footprint) into capturable search authority.</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="pulse-dot" id="unread-pulse"></div>
+      <div class="stat-card__value" style="color: var(--metric-red);" id="unread-count">2</div>
+      <div class="stat-card__label">Unread Opportunities</div>
+      <div class="stat-card__subtitle">New plays to review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-green);">245</div>
+      <div class="stat-card__label">Credits Remaining</div>
+      <div class="stat-card__subtitle">Year 2 Allocation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-blue);">38.6</div>
+      <div class="stat-card__label">Million Data Points</div>
+      <div class="stat-card__subtitle">4 Collin/Denton County Markets, 14 Months</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-purple);">7</div>
+      <div class="stat-card__label">Next Strategy Session</div>
+      <div class="stat-card__subtitle">May 6, 2026</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+
+    <div class="col-left">
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">In Progress</span>
+          <span class="count-pill count-pill--blue">3</span>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-1">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Location Page Split: 1 &rarr; 4 LocalBusiness Pages</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">78%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 78%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-2">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Robotic Knee Content Cluster</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">62%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 62%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-3">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Provider Page E-E-A-T Refresh</span>
+            <span class="play-item-ip__pct" style="color: var(--amber);">44%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 44%; background: var(--amber);"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">Opportunities</span>
+          <span class="count-pill count-pill--red" id="recommended-badge">2 new</span>
+        </div>
+
+        <div class="play-item selected" data-play-id="rec-1" id="play-rec-1">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">OrthoNow Walk-In Discoverability Push</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">46 Credits</span>
+              <span class="badge badge--procedure">Differentiator Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item" data-play-id="rec-2" id="play-rec-2">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Geo-Modified Procedure Pages: 4 Cities &times; 5 Procedures</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">38 Credits</span>
+              <span class="badge badge--procedure">Geo-Procedure Matrix</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-3" id="play-rec-3">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">POSMC Ranking Drop on Frisco Sports Med</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Competitive Intel</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">22 Credits</span>
+              <span class="badge badge--procedure">Organic Gap Capture</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-4" id="play-rec-4">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Pediatric Spine &amp; Hand Content Build</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">28 Credits</span>
+              <span class="badge badge--procedure">Subspecialty Moat</span>
+            </div>
+          </div>
+        </div>
+
+        <span class="toggle-link" id="toggle-completed">Show 3 completed plays</span>
+
+        <div class="completed-section" id="completed-section">
+          <div class="play-item-completed" data-play-id="comp-1">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Q1 GBP Optimization: 4 Locations</span>
+            </div>
+            <div class="play-item-completed__outcome">+31% direction requests across all 4 offices</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-2">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Hand &amp; Wrist Procedure Schema</span>
+            </div>
+            <div class="play-item-completed__outcome">8 hand pages with MedicalProcedure schema deployed</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-3">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Collin County Competitive Landscape Refresh</span>
+            </div>
+            <div class="play-item-completed__outcome">16 competitors mapped, 4 ranking shifts flagged</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var ICON_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="#2db5b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.5"/><circle cx="15" cy="14" r="1.5"/><path d="M12 2v4"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>';
+    var ICON_RADAR = '<svg viewBox="0 0 24 24" fill="none" stroke="#4e9df7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>';
+    var ICON_AUDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#f7a600" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>';
+    var ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+    var ICON_LAUNCH_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1h6v6"/><path d="M13 1L6 8"/><path d="M11 8v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/></svg>';
+    var ICON_X_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3L3 11"/><path d="M3 3l8 8"/></svg>';
+    var ICON_GBP = '<svg viewBox="0 0 24 24" fill="none" stroke="#36d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    var ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef6a5e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    var ICON_CODE = '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>';
+
+    var PLAYS = {
+
+      "rec-1": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "OrthoNow Walk-In Discoverability Push",
+        query: 'visibility audit for OrthoNow Walk-In Clinic across "orthopedic urgent care Carrollton," "walk-in orthopedic Frisco," and 11 related injury-triage queries',
+        sections: [
+          {
+            label: "The Data",
+            body: 'OrthoTexas operates the <span class="hl-green">OrthoNow Walk-In Clinic</span> at <span class="hl-blue">Carrollton (M-F mornings)</span> and <span class="hl-blue">Frisco (Saturday mornings)</span> with 48-hour injury triage, but the service surfaces on <span class="hl-green">1 page</span> of the site (a paragraph on the home page and a brief mention on a generic services page). AI Visibility on "orthopedic urgent care Carrollton" sits at <span class="hl-green">23/100</span>. <span class="hl-blue">POSMC</span> and <span class="hl-blue">Star Orthopedics</span> currently dominate "walk-in orthopedic clinic Frisco" despite neither operating a true walk-in service comparable to OrthoNow. Search demand for "orthopedic urgent care Carrollton" runs <span class="hl-green">+58% YoY</span> and "walk-in orthopedic clinic Frisco" runs <span class="hl-green">+41% YoY</span>.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is the single most under-leveraged service in the OrthoTexas portfolio. OrthoNow is a real differentiator: same-week triage by a fellowship-trained orthopedic surgeon at the Carrollton HQ and Frisco office, no ER copay, no urgent-care-then-referral two-step. The model is detecting that competitors are being cited in AI Overviews for queries OrthoTexas should own outright simply because they have content and OrthoTexas has none. <span class="hl-blue">POSMC</span> in particular wins these queries with a generic "same day appointments" page that doesn\'t even match OrthoNow\'s actual capability. The fix is content infrastructure plus paid amplification during the awareness ramp.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a dedicated OrthoNow hub: cornerstone landing page (1,800+ words) plus 2 location-specific child pages for Carrollton and Frisco with full <span class="hl-green">MedicalClinic + LocalBusiness + EmergencyService</span> schema, hours, accepted insurance, and triage process. Pair with 4 supporting articles (when to use OrthoNow vs. ER, sports injury triage, fracture evaluation timeline, kids injury walk-in guide) and a 60-day paid search amplification on the 11 high-intent triage queries. Forecasted: <span class="hl-green">+520 monthly organic visits</span> and a measurable lift in walk-in patient volume at both qualifying offices.'
+          }
+        ],
+        procedure: {
+          title: "Differentiator Build",
+          bullets: [
+            { bold: "Cornerstone Hub:", text: "Dedicated OrthoNow landing page (1,800+ words) leading with 48-hour triage, fellowship-trained surgeon coverage, no-referral access, and full MedicalClinic + EmergencyService schema." },
+            { bold: "Location Children:", text: "2 location-specific pages for Carrollton (M-F mornings, 4780 N Josey Ln) and Frisco (Saturday mornings, 5757 Warren Pkwy) with hours, parking, and check-in process clearly exposed." },
+            { bold: "Supporting Cluster:", text: "4 articles: OrthoNow vs. ER decision guide, sports injury triage timeline, fracture evaluation walkthrough, pediatric injury walk-in guide. All interlinked." },
+            { bold: "Paid Amplification:", text: "60-day Google Ads push on the 11 high-intent triage queries during organic ranking ramp. GBP service posts on Carrollton and Frisco profiles." },
+            { bold: "Validation:", text: "Daily SERP and AI Overview tracking on the 11 triage queries plus referral attribution from new walk-in volume at both offices." }
+          ],
+          cost: "46 Credits"
+        }
+      },
+
+      "rec-2": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Geo-Modified Procedure Pages: 4 Cities × 5 Procedures",
+        query: 'content gap audit for procedure-by-city queries across Carrollton, Plano, Frisco, and Denton',
+        sections: [
+          {
+            label: "The Data",
+            body: 'OrthoTexas has <span class="hl-green">zero</span> geo-modified procedure pages. The 5 highest-volume commercial-intent procedures (knee replacement, robotic knee, hand surgery, spine surgery, sports medicine) currently sit on single non-geo pages. Search demand on the geo-modified variants is substantial: <span class="hl-green">"knee replacement Plano TX"</span> at 880 monthly searches, <span class="hl-green">"robotic knee replacement Frisco"</span> at 590, <span class="hl-green">"hand surgeon Plano"</span> at 480, <span class="hl-green">"spine surgeon Denton"</span> at 320, <span class="hl-green">"sports medicine doctor Frisco"</span> at 720. <span class="hl-blue">POSMC</span> holds top-3 positions on 14 of 20 target cells in the matrix.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is the largest pure content gap in the audit and the highest-leverage one because the surgical capability is already there: 13 physicians, 4 offices spanning the strongest demand corridor in the DFW metro, every procedure delivered in-network. The gap is purely page-level. <span class="hl-blue">POSMC</span> wins these queries with a 9-page geo-procedure matrix anchored from their Plano hub. <span class="hl-blue">Star Orthopedics</span> wins Frisco-specific queries with 4 dedicated geo pages. <span class="hl-blue">Texas Orthopaedic Associates</span> wins broader DFW terms with stronger content depth. OrthoTexas\'s combined service-area page treats all 4 cities as one and forfeits the geo-modified ranking opportunity entirely.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build the 20-cell geo-procedure matrix: 4 cities (Carrollton, Plano, Frisco, Denton) × 5 procedures (knee replacement, robotic knee, hand surgery, spine surgery, sports medicine). Each page 1,200-1,500 words with surgeon attribution to the physicians covering that city, full <span class="hl-green">MedicalProcedure + LocalBusiness</span> schema, candidacy section, and recovery timeline. Internal-link from the 4 LocalBusiness pages already in flight (ip-1). Forecasted: <span class="hl-green">+780 monthly organic visits</span> at maturity with the highest gains in Plano (largest gap to POSMC) and Frisco (Star Orthopedics displacement opportunity).'
+          }
+        ],
+        procedure: {
+          title: "Geo-Procedure Matrix",
+          bullets: [
+            { bold: "Page Production:", text: "20 pages across the 4 cities × 5 procedure matrix, each 1,200-1,500 words with surgeon attribution to the physicians serving that office." },
+            { bold: "Schema Deployment:", text: "Full MedicalProcedure + LocalBusiness + Physician schema on every page, validated via Rich Results Test before deploy." },
+            { bold: "Internal Linking:", text: "Cross-link from the 4 LocalBusiness pages (ip-1), procedure overview pages, and surgeon profiles. Build a clean topical authority graph." },
+            { bold: "Priority Sequencing:", text: "Plano set first (largest gap to POSMC, highest commercial intent), Frisco second (Star Orthopedics displacement), then Carrollton and Denton." },
+            { bold: "Tracking:", text: "Daily SERP monitoring on the 20 primary terms plus 30 long-tail variants for 90 days post-deployment." }
+          ],
+          cost: "38 Credits"
+        }
+      },
+
+      "rec-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "POSMC Ranking Drop on Frisco Sports Med",
+        query: 'ranking movement for "sports medicine doctor Frisco" and 5 related Plano/Frisco sports medicine queries where POSMC has historically held top-3',
+        sections: [
+          {
+            label: "The Data",
+            body: '<span class="hl-blue">Plano Orthopedic &amp; Sports Medicine Center (POSMC)</span> has dropped from positions <span class="hl-green">#1-2 to #4-6</span> across <span class="hl-green">5 sports medicine queries</span> over the past 36 days, including "sports medicine doctor Frisco," "sports injury Frisco TX," and "knee specialist Frisco." Their content cadence has slowed materially (no new sports medicine articles since mid-January), and their <span class="hl-green">"D Magazine Best Doctors"</span> brand pages have not been refreshed since 2024. POSMC\'s Plano office sits <span class="hl-green">1 mile</span> from OrthoTexas Plano.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'POSMC has been the dominant Plano-area orthopedic brand on sports medicine for the better part of a decade, anchored by their D Magazine Best Doctors recognition and a Frisco PT center. Their drop appears structural: 2 referring domains went inactive in Q1, their primary sports med page is 17 months stale, and their AI Overview citations are dropping in lockstep with rank. OrthoTexas has fellowship-trained sports medicine surgeons across the Plano and Frisco offices and the on-site PT staff to back the recovery narrative, but currently does not rank top-5 on any of the 5 affected queries because page-level sports medicine content is thin and not geo-modified. The displacement window is open right now.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Targeted sports medicine hub refresh plus 3 supporting articles (return-to-sport timeline, common youth sports injuries Frisco, pickleball injury guide North Dallas) tied to surgeon attribution and the OrthoNow walk-in service for acute injuries. Geo-target Plano and Frisco specifically. Forecasted: capture <span class="hl-green">3-4 of the 5 affected queries</span> within 60-75 days, with the remaining 1-2 contested but reachable by Q3. Pairs with the geo-procedure matrix (rec-2) once that ships and reinforces the Plano and Frisco LocalBusiness pages from ip-1.'
+          }
+        ],
+        procedure: {
+          title: "Organic Gap Capture",
+          bullets: [
+            { bold: "Hub Refresh:", text: "Rewrite the OrthoTexas sports medicine landing page with surgeon attribution, fellowship credentials, on-site PT integration, OrthoNow walk-in tie-in, and FAQ schema targeting the exact queries POSMC is losing." },
+            { bold: "Article Cluster:", text: "3 supporting pieces (return-to-sport protocol, youth sports injuries Frisco/Plano, pickleball injury guide) interlinked with the hub and the OrthoNow content." },
+            { bold: "Geo Reinforcement:", text: "Sports medicine variants on the Plano and Frisco geo-procedure pages from rec-2. GBP posts on Plano and Frisco profiles to support local-pack visibility." },
+            { bold: "Tracking:", text: "Daily SERP monitoring on the 5 affected queries plus 8 long-tail variants for 90 days." }
+          ],
+          cost: "22 Credits"
+        }
+      },
+
+      "rec-4": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Pediatric Spine & Hand Content Build",
+        query: 'content depth audit for pediatric orthopedic subspecialty pages (pediatric spine, pediatric hand & wrist)',
+        sections: [
+          {
+            label: "The Data",
+            body: 'OrthoTexas offers <span class="hl-green">pediatric spine</span> and <span class="hl-green">pediatric hand and wrist</span> as named subspecialties under fellowship-trained surgeons, but the content footprint is <span class="hl-green">2 pages</span> averaging <span class="hl-green">410 words</span> each. Search volume on "pediatric spine specialist Plano" runs 290 monthly, "pediatric hand surgeon DFW" at 240, "scoliosis specialist Plano" at 380. Neither <span class="hl-blue">POSMC</span> nor <span class="hl-blue">Star Orthopedics</span> offers these subspecialties; <span class="hl-blue">Texas Orthopaedic Associates</span> mentions pediatric care broadly but has no dedicated pediatric subspecialty pages.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Pediatric spine and pediatric hand are the cleanest competitive moats in the OrthoTexas portfolio. Adult orthopedic groups across DFW broadly do not staff pediatric subspecialists, and the families searching for these services convert at materially higher rates because the procedure decision is more deliberate. OrthoTexas has the credentialed surgical bench but none of the page-level content the queries demand. Top-ranking pages on "scoliosis specialist Plano" average <span class="hl-green">1,650 words</span> with parent-facing FAQ blocks, condition libraries, and treatment-pathway diagrams. OrthoTexas\'s current 410-word pages don\'t register.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Expand the 2 existing pediatric subspecialty pages to 1,500-1,800 words with surgeon attribution, parent-facing FAQ schema, condition libraries (scoliosis, kyphosis, congenital hand differences, trigger thumb), and treatment-pathway sections. Add 4 supporting articles (when to see a pediatric spine specialist, scoliosis screening guide, congenital hand differences, sports injuries in young athletes). Full <span class="hl-green">MedicalProcedure + Physician + FAQPage</span> schema. Forecasted: <span class="hl-green">+260 monthly organic visits</span> with the highest conversion strength in the portfolio given the underserved, deliberate nature of pediatric subspecialty search.'
+          }
+        ],
+        procedure: {
+          title: "Subspecialty Moat",
+          bullets: [
+            { bold: "Page Expansion:", text: "Rewrite pediatric spine and pediatric hand &amp; wrist pages to 1,500-1,800 words each with surgeon attribution, parent-facing FAQs, and full schema." },
+            { bold: "Supporting Articles:", text: "4 pieces: when to see a pediatric spine specialist, scoliosis screening guide for parents, congenital hand differences overview, youth athlete injury triage." },
+            { bold: "Schema Deployment:", text: "MedicalProcedure + Physician + FAQPage schema on all pediatric pages, with explicit pediatric audience markup where supported." },
+            { bold: "Geo Layer:", text: "Light geo variants for Plano and Frisco where pediatric demand is highest. Internal links from the 4 LocalBusiness pages (ip-1) to surface pediatric capability locally." }
+          ],
+          cost: "28 Credits"
+        }
+      },
+
+      "ip-1": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Location Page Split: 1 → 4 LocalBusiness Pages",
+        progress: 78,
+        query: "splitting the single combined locations page into 4 individual LocalBusiness pages with unique schema, hours, and surgeon coverage",
+        sections: [
+          {
+            label: "The Data",
+            body: 'OrthoTexas had <span class="hl-green">1 combined locations page</span> covering all 4 offices with shared address blocks, generic hours, and no individual <span class="hl-green">LocalBusiness schema</span> per office. We mapped <span class="hl-green">4 unique LocalBusiness entities</span> (Carrollton HQ at 4780 N Josey Ln, Plano at 4031 W Plano Pkwy, Frisco at 5757 Warren Pkwy, Denton at 3200 Colorado Blvd) and built individual pages for each. <span class="hl-green">3 of 4</span> pages are deployed with full schema; the Denton page is in physician review for the staff roster section.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'The single combined page was bleeding local-pack visibility on all 4 markets. Within 30 days of the Carrollton, Plano, and Frisco deployments, we measured <span class="hl-green">+24% impressions</span> and <span class="hl-blue">+19% click-through</span> on geo-modified branded queries ("OrthoTexas Plano," "OrthoTexas Frisco"). The new pages each carry unique <span class="hl-green">LocalBusiness + MedicalClinic</span> schema with hours, parking notes, accepted insurance, and the surgeon roster covering that office. Critical prerequisite for the geo-procedure matrix (rec-2) to deploy on stable canonical local pages.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Denton page expected to ship in 8-10 days. Once complete, OrthoTexas will have 4 fully optimized LocalBusiness pages anchoring 4 separate Google Business Profiles, with the surgeon attribution graph cleanly mapped from each office to the providers that staff it. This unlocks downstream rankings on the entire geo-procedure matrix and is the foundation for the OrthoNow location-child pages from rec-1.'
+          }
+        ],
+        procedure: {
+          title: "Location Page Split: 1 → 4 LocalBusiness Pages",
+          bullets: [
+            { bold: "Completed:", text: "Carrollton HQ (4780 N Josey Ln), Plano (4031 W Plano Pkwy), and Frisco (5757 Warren Pkwy) pages live with unique LocalBusiness + MedicalClinic schema" },
+            { bold: "In Progress:", text: "Denton (3200 Colorado Blvd) page in physician review for the staff roster (78% overall)" },
+            { bold: "Next:", text: "Ship Denton, validate all 4 schema entities in Search Console, hand off to GBP team for paired profile updates" }
+          ],
+          cost: "24 Credits (allocated)"
+        }
+      },
+
+      "ip-2": {
+        source: "SEO Strategy",
+        sourceIcon: ICON_AUDIT,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Robotic Knee Content Cluster",
+        progress: 62,
+        query: "cornerstone + supporting cluster build competing for \"robotic knee replacement Frisco\" and \"robotic knee replacement Plano\"",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Cluster is <span class="hl-green">62% complete</span>. Cornerstone robotic knee replacement page was rewritten and republished in March with full <span class="hl-green">MedicalProcedure + Physician schema</span> and surgeon attribution to the joint replacement bench. <span class="hl-green">3 of 5</span> supporting articles are live (robotic vs. traditional knee, recovery week-by-week, candidacy criteria). Two articles remain in production: insurance and cost guide, age and activity considerations.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Performance is tracking ahead of forecast. Cornerstone page moved from position <span class="hl-green">#9 to #4</span> for <span class="hl-green">"robotic knee replacement Frisco"</span> within 8 weeks of relaunch and is currently <span class="hl-green">#5</span> for <span class="hl-green">"robotic knee replacement Plano"</span>. The cluster is now driving <span class="hl-green">+140 monthly organic visits</span> over baseline. <span class="hl-blue">POSMC</span> still holds #1-2 on Plano variants but their cornerstone page is 14 months stale, suggesting the cluster will continue closing ground. The 2 remaining articles target insurance and patient-fit, which are the highest-converting downstream queries.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Final 2 articles publish in the next 2-3 weeks. After publication, the cluster moves into a 60-day monitoring window with light optimization based on observed query patterns. Cluster also feeds the geo-procedure matrix (rec-2) since "robotic knee replacement Frisco/Plano" is one of the 5 procedures in the matrix and the cornerstone provides authority for the city variants to inherit.'
+          }
+        ],
+        procedure: {
+          title: "Robotic Knee Content Cluster",
+          bullets: [
+            { bold: "Completed:", text: "Cornerstone rewrite, 3 of 5 supporting articles published, internal linking deployed across the joint replacement vertical" },
+            { bold: "In Progress:", text: "Insurance and cost guide, age and activity considerations articles in physician review (62% overall)" },
+            { bold: "Next:", text: "Final article publish, 60-day monitoring window, integration with geo-procedure matrix once that ships" }
+          ],
+          cost: "22 Credits (allocated)"
+        }
+      },
+
+      "ip-3": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Provider Page E-E-A-T Refresh",
+        progress: 44,
+        query: "physician page expansion and Physician schema deployment for the 13-surgeon OrthoTexas roster",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (audit and content briefs) is complete. We mapped the <span class="hl-green">13 physician pages</span> currently averaging <span class="hl-green">320 words</span> with no Physician schema. Briefs cover fellowship credentials, board certifications, hospital affiliations, named subspecialties (Sports Medicine, Foot &amp; Ankle, Hand &amp; Wrist, Shoulder &amp; Elbow, Joint Replacement, Spine, PM&amp;R, Hip Preservation, Pediatric Hand/Spine), publication links, and patient-facing Q&amp;A. Phase 2 (page production) is in progress: <span class="hl-green">6 of 13</span> pages drafted, 3 in physician review, 7 still in queue.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'OrthoTexas\'s physician roster is the practice\'s strongest competitive asset and the most under-exposed in the current site. <span class="hl-blue">POSMC</span> rides "D Magazine Best Doctors" branding hard on every physician page. <span class="hl-blue">Star Orthopedics</span> leads with biologics and regenerative medicine framing. <span class="hl-blue">Texas Orthopaedic Associates</span> has the deepest physician page content footprint in the competitive set. OrthoTexas\'s 13 surgeons (covering more subspecialties than any of the named competitors) read as thinner online than they are in clinic. The fix is page depth, schema, and surgeon-attributed content threaded into the procedure pages.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Full deployment expected in 6-7 weeks (slower than ideal because each page requires individual physician review and headshot/credentials updates). Forecasted: <span class="hl-green">+220 monthly organic visits</span> from named-surgeon and subspecialty queries, plus a meaningful uplift in E-E-A-T signal density that compounds across the procedure pages once each surgeon\'s entity is properly attributed.'
+          }
+        ],
+        procedure: {
+          title: "Provider Page E-E-A-T Refresh",
+          bullets: [
+            { bold: "Completed:", text: "Audit, content briefs covering fellowships, subspecialties, board cert, publications; 6 of 13 pages drafted" },
+            { bold: "In Progress:", text: "Physician review for 3 pages, production for remaining 7 (44% overall, amber due to physician review pacing)" },
+            { bold: "Next:", text: "Complete drafts, deploy with full Physician schema, thread surgeon attribution into procedure pages and the geo-procedure matrix" }
+          ],
+          cost: "26 Credits (allocated)"
+        }
+      },
+
+      "comp-1": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Q1 GBP Optimization: 4 Locations",
+        query: "Google Business Profile refresh across the Carrollton HQ, Plano, Frisco, and Denton offices",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed all 4 OrthoTexas Google Business Profiles in February-March: corrected primary categories, expanded service descriptions to call out the 9 named subspecialties, deployed photo updates from a coordinated shoot covering all 4 offices, refreshed Q&amp;A seeding, and added structured posts for Q2 procedure focuses (robotic knee, OrthoNow walk-in clinic).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Across all 4 locations: <span class="hl-green">+31% direction requests</span>, <span class="hl-blue">+26% profile views</span>, and <span class="hl-green">+18% calls</span> in the 60 days post-deployment. Strongest lifts in <span class="hl-blue">Frisco (+44%)</span> and <span class="hl-blue">Denton (+39%)</span>, where prior GBP content had been thinnest. The Carrollton HQ saw smaller % gains but the largest absolute volume increase given its anchor presence on Josey Lane. OrthoNow service-post seeding on Carrollton and Frisco profiles delivered visible uplift on walk-in-related GBP impressions.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'GBP optimization is now integrated into OrthoTexas\'s ongoing care. Weekly post schedule, monthly review response cadence, and quarterly photo refreshes are standardized. Next refresh cycle scheduled for July 2026 with priority on continuing to surface the OrthoNow walk-in service on Carrollton and Frisco profiles ahead of the rec-1 hub launch.'
+          }
+        ],
+        procedure: {
+          title: "Q1 GBP Optimization: 4 Locations",
+          bullets: [
+            { bold: "Completed:", text: "All 4 profiles fully refreshed with categories, descriptions, photos, Q&amp;A, and Q2 posts including OrthoNow seeding on Carrollton and Frisco" },
+            { bold: "Result:", text: "+31% direction requests, +26% profile views, +18% calls across the 4-office network" },
+            { bold: "Status:", text: "Ongoing maintenance integrated, next refresh July 2026" }
+          ],
+          cost: "16 Credits (spent)"
+        }
+      },
+
+      "comp-2": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Hand & Wrist Procedure Schema",
+        query: "structured data deployment for the hand and wrist procedure pages",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Deployed <span class="hl-green">MedicalProcedure + FAQPage</span> schema across <span class="hl-green">8 hand and wrist procedure pages</span> in late February (carpal tunnel release, trigger finger release, Dupuytren\'s, hand fracture, wrist arthroscopy, distal radius fracture, thumb arthritis, ganglion cyst). Pages now expose 6-8 structured entities each, up from a baseline of 1-2.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Hand &amp; wrist was prioritized as the schema pilot vertical because the demand is volume-heavy (carpal tunnel and trigger finger lead the practice\'s elective hand caseload), competition is moderate, and the pediatric hand subspecialty extends the same content infrastructure to a higher-margin downstream play (rec-4). Within 30 days of deployment, <span class="hl-green">5 pages</span> gained rich result eligibility and the carpal tunnel page captured an AI Overview citation it had previously lost to <span class="hl-blue">Texas Orthopaedic Associates</span>.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'This work served as the schema pattern validation for the broader procedure library. Performance from these 8 pages directly informed the procedure schema patterns now being deployed against the joint replacement (ip-2) and pediatric subspecialty (rec-4) verticals.'
+          }
+        ],
+        procedure: {
+          title: "Hand & Wrist Procedure Schema",
+          bullets: [
+            { bold: "Completed:", text: "8 hand and wrist procedure pages with full MedicalProcedure + FAQPage schema deployed" },
+            { bold: "Result:", text: "5 pages newly eligible for rich results, 1 AI Overview citation recaptured on carpal tunnel" },
+            { bold: "Status:", text: "Pattern productized into the joint replacement and pediatric subspecialty rollouts" }
+          ],
+          cost: "12 Credits (spent)"
+        }
+      },
+
+      "comp-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Collin County Competitive Landscape Refresh",
+        query: "competitor identification and tracking refresh for the Collin and Denton County orthopedic markets",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed OrthoTexas\'s competitive tracking set for 2026: <span class="hl-green">16 competitors</span> profiled (up from 11 in 2025) with current location count, surgeon roster, schema implementation, blog cadence, paid search activity, and estimated organic traffic. Full ranking baselines refreshed across <span class="hl-green">2,140 keywords</span>. Tracked set anchored by <span class="hl-blue">Plano Orthopedic &amp; Sports Medicine Center (POSMC)</span>, <span class="hl-blue">Star Orthopedics</span>, and <span class="hl-blue">Texas Orthopaedic Associates</span>.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Most consequential 2026 findings: <span class="hl-blue">POSMC</span> appears to be in a soft phase on sports medicine queries (drove the rec-3 displacement play) but remains dominant on Plano joint replacement; their Plano office sits 1 mile from OrthoTexas Plano. <span class="hl-blue">Star Orthopedics</span> continues to lead with biologics and regenerative medicine framing in Frisco/Coppell, where their content is materially deeper than OrthoTexas\'s. <span class="hl-blue">Texas Orthopaedic Associates</span> has the strongest content footprint in the competitive set and is the benchmark to beat on procedure-page depth. None of the three competitors offer pediatric subspecialty (informing rec-4) or operate a true OrthoNow-equivalent walk-in service (informing rec-1).'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Refreshed tracking is now feeding the AI model continuously. All four current opportunity plays (rec-1 through rec-4) are direct outputs of the refreshed competitive view. Tracking will refresh again at end of Q3 with particular attention to whether POSMC\'s sports medicine drop accelerates or stabilizes.'
+          }
+        ],
+        procedure: {
+          title: "Collin County Competitive Landscape Refresh",
+          bullets: [
+            { bold: "Completed:", text: "16 competitors profiled including POSMC, Star Orthopedics, Texas Orthopaedic Associates; 2,140 keywords baselined" },
+            { bold: "Result:", text: "All 4 active opportunity plays generated from the refreshed competitive view" },
+            { bold: "Status:", text: "Continuous monitoring active; next full refresh at end of Q3" }
+          ],
+          cost: "9 Credits (spent)"
+        }
+      }
+    };
+
+    function renderDetail(playId) {
+      var play = PLAYS[playId];
+      if (!play) {
+        document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">Select a play to view details</div>';
+        return;
+      }
+      var sectionsHtml = play.sections.map(function(s) {
+        return '<div class="detail-section">' +
+          '<div class="detail-section__label">' + s.label + '</div>' +
+          '<div class="detail-section__body">' + s.body + '</div>' +
+        '</div>';
+      }).join('');
+      var bulletsHtml = play.procedure.bullets.map(function(b) {
+        return '<li><strong>' + b.bold + '</strong> ' + b.text + '</li>';
+      }).join('');
+      var isCompleted = playId.startsWith('comp-');
+      var isInProgress = playId.startsWith('ip-');
+      var progressHtml = '';
+      if (isInProgress) {
+        var pct = play.progress || 0;
+        var barColor = pct >= 60 ? 'var(--metric-green)' : 'var(--amber)';
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: ' + pct + '%; background: ' + barColor + ';"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: ' + barColor + ';">' + pct + '% Complete</div>' +
+          '</div>';
+      } else if (isCompleted) {
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: 100%; background: var(--metric-green);"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: var(--metric-green);">100% Complete</div>' +
+          '</div>';
+      }
+      var procedureHtml =
+        '<div class="procedure-block">' +
+          '<div class="procedure-block__header">' +
+            '<div class="procedure-block__icon">' + ICON_ROCKET + '</div>' +
+            '<span class="procedure-block__label">Recommended Strategic Play</span>' +
+          '</div>' +
+          '<div class="procedure-block__title">' + play.procedure.title + '</div>' +
+          '<ul class="procedure-block__list">' + bulletsHtml + '</ul>' +
+          '<div class="procedure-block__cost">Cost: ' + play.procedure.cost + '</div>' +
+          (!(isInProgress || isCompleted) ?
+            '<div class="procedure-block__actions">' +
+              '<button class="btn btn--primary" onclick="handleLaunch(\'' + playId + '\')">' + ICON_LAUNCH_SM + ' Launch Play</button>' +
+              '<button class="btn btn--ghost" onclick="handleDismiss(\'' + playId + '\')">' + ICON_X_SM + ' Dismiss</button>' +
+            '</div>' +
+            '<div id="demo-notice-area"></div>'
+          : '') +
+        '</div>';
+      var bottomHtml = (isInProgress || isCompleted) ? procedureHtml + progressHtml : procedureHtml;
+      var html =
+        '<div class="detail-header">' +
+          '<div class="detail-header__icon">' + play.sourceIcon + '</div>' +
+          '<span class="detail-header__source">' + play.source + '</span>' +
+          '<span class="badge ' + play.priorityClass + ' detail-header__priority">' + (isCompleted || isInProgress ? '' : 'Priority: ') + play.priority + '</span>' +
+        '</div>' +
+        '<div class="detail-title">' + play.title + '</div>' +
+        '<div class="detail-query-box">' + play.query + '</div>' +
+        sectionsHtml + bottomHtml;
+      document.getElementById('detail-panel').innerHTML = html;
+    }
+
+    var currentSelected = 'rec-1';
+    var unreadCount = 2;
+
+    function selectPlay(playId, element) {
+      document.querySelectorAll('.play-item.selected, .play-item-ip.selected, .play-item-completed.selected').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      if (element.classList.contains('play-item') && !element.classList.contains('read')) {
+        element.classList.add('read');
+        unreadCount = Math.max(0, unreadCount - 1);
+        document.getElementById('unread-count').textContent = unreadCount;
+        if (unreadCount > 0) {
+          document.getElementById('recommended-badge').textContent = unreadCount + ' new';
+        } else {
+          document.getElementById('recommended-badge').textContent = '0 new';
+          var pulse = document.getElementById('unread-pulse');
+          if (pulse) pulse.style.display = 'none';
+        }
+      }
+      currentSelected = playId;
+      renderDetail(playId);
+    }
+
+    document.querySelectorAll('.play-item').forEach(function(el) {
+      el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+    });
+    document.querySelectorAll('.play-item-ip').forEach(function(el) {
+      el.addEventListener('click', function() {
+        document.querySelectorAll('.play-item.selected, .play-item-completed.selected, .play-item-ip.selected').forEach(function(s) {
+          s.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        currentSelected = el.dataset.playId;
+        renderDetail(el.dataset.playId);
+      });
+    });
+    function bindCompletedPlays() {
+      document.querySelectorAll('.play-item-completed').forEach(function(el) {
+        if (el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+      });
+    }
+    var toggleLink = document.getElementById('toggle-completed');
+    var completedSection = document.getElementById('completed-section');
+    var completedVisible = false;
+    toggleLink.addEventListener('click', function() {
+      completedVisible = !completedVisible;
+      if (completedVisible) {
+        completedSection.classList.add('visible');
+        toggleLink.textContent = 'Hide completed plays';
+        bindCompletedPlays();
+      } else {
+        completedSection.classList.remove('visible');
+        toggleLink.textContent = 'Show 3 completed plays';
+      }
+    });
+
+    function showDemoNotice(message) {
+      var area = document.getElementById('demo-notice-area');
+      if (!area) return;
+      var existing = area.querySelector('.demo-notice');
+      if (existing) existing.remove();
+      var notice = document.createElement('div');
+      notice.className = 'demo-notice';
+      notice.textContent = message;
+      area.appendChild(notice);
+    }
+    function handleLaunch(playId) {
+      showDemoNotice('This is a demo. In the live platform, this would launch the play and deduct credits from your balance.');
+    }
+    function handleDismiss(playId) {
+      showDemoNotice('This is a demo. In the live platform, this play would be dismissed and moved to your archive.');
+    }
+
+    renderDetail('rec-1');
+  </script>
+</body>
+</html>

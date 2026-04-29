@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategic Plays Dashboard | Resurgens Orthopaedics</title>
+
+  <!-- Google Fonts: Roboto 400, 500 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-page: #0e1520;
+      --bg-card: #1a2838;
+      --border: #283848;
+      --border-selected: #4e9df7;
+      --text-muted: #6b7a8d;
+      --text-body: #8a99ab;
+      --metric-red: #ef6a5e;
+      --metric-green: #36d399;
+      --metric-blue: #4e9df7;
+      --metric-purple: #8b5cf6;
+      --amber: #f7a600;
+      --btn-primary: #00529b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: auto; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-page); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-page); }
+    body { background: var(--bg-page); color: #e2e8f0; font-family: 'Roboto', sans-serif; font-weight: 400; font-size: 14px; line-height: 1.5; padding: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px 16px; text-align: center; position: relative; }
+    .stat-card__value { font-size: 52px; font-weight: 500; line-height: 1.1; margin-bottom: 4px; }
+    .stat-card__label { font-size: 16px; font-weight: 500; color: #e2e8f0; margin-bottom: 2px; }
+    .stat-card__subtitle { font-size: 13px; color: var(--text-muted); }
+    .pulse-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--metric-red); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 106, 94, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(239, 106, 94, 0); } }
+    .dashboard { display: flex; gap: 24px; align-items: flex-start; }
+    .col-left { width: 40%; min-width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 24px; }
+    .col-right { flex: 1; min-width: 0; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-header__title { font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+    .count-pill { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 12px; line-height: 1.4; }
+    .count-pill--blue { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .count-pill--red { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .play-item-ip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .play-item-ip:hover { border-color: var(--text-muted); }
+    .play-item-ip.selected { border-color: var(--border-selected); }
+    .play-item-ip__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .play-item-ip__title { font-size: 14px; font-weight: 500; color: #e2e8f0; }
+    .play-item-ip__pct { font-size: 13px; font-weight: 500; }
+    .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .progress-bar__fill { height: 100%; border-radius: 2px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    .play-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+    .play-item:hover { border-color: var(--text-muted); }
+    .play-item.selected { border-color: var(--border-selected); }
+    .play-item.read .play-item__title { color: var(--text-body); }
+    .play-item__unread-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--metric-red); }
+    .play-item.read .play-item__unread-dot { display: none; }
+    .play-item__title { font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 6px; padding-right: 20px; }
+    .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge--source { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .badge--critical { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .badge--medium { background: rgba(247, 166, 0, 0.12); color: var(--amber); }
+    .badge--credits { background: rgba(54, 211, 153, 0.12); color: var(--metric-green); }
+    .badge--procedure { background: rgba(139, 92, 246, 0.12); color: var(--metric-purple); }
+    .toggle-link { display: inline-block; font-size: 13px; color: var(--metric-blue); cursor: pointer; margin-top: 4px; user-select: none; }
+    .toggle-link:hover { text-decoration: underline; }
+    .completed-section { display: none; margin-top: 12px; }
+    .completed-section.visible { display: block; }
+    .play-item-completed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; opacity: 0.6; transition: opacity 0.15s, border-color 0.15s; position: relative; }
+    .play-item-completed:hover { opacity: 0.85; border-color: var(--text-muted); }
+    .play-item-completed.selected { border-color: var(--border-selected); opacity: 0.85; }
+    .play-item-completed__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .play-item-completed__check { color: var(--metric-green); font-size: 14px; flex-shrink: 0; }
+    .play-item-completed__title { font-size: 14px; font-weight: 500; color: var(--text-body); }
+    .play-item-completed__outcome { font-size: 12px; color: var(--metric-green); margin-left: 22px; }
+    .detail-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+    .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .detail-header__icon { width: 28px; height: 28px; flex-shrink: 0; }
+    .detail-header__source { font-size: 13px; font-weight: 500; color: var(--text-body); }
+    .detail-header__priority { margin-left: auto; }
+    .detail-title { font-size: 20px; font-weight: 500; color: #e2e8f0; margin-bottom: 16px; }
+    .detail-query-box { background: var(--bg-page); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-body); margin-bottom: 20px; font-style: italic; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-section__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #e2e8f0; margin-bottom: 6px; }
+    .detail-section__body { font-size: 14px; color: var(--text-body); line-height: 1.6; }
+    .hl-green { background: rgba(54, 211, 153, 0.1); color: var(--metric-green); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .hl-blue { background: rgba(78, 157, 247, 0.1); color: var(--metric-blue); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .procedure-block { background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .procedure-block__header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .procedure-block__icon { width: 22px; height: 22px; flex-shrink: 0; }
+    .procedure-block__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .procedure-block__title { font-size: 18px; font-weight: 500; color: #e2e8f0; margin-bottom: 14px; }
+    .procedure-block__list { list-style: none; margin-bottom: 14px; }
+    .procedure-block__list li { font-size: 13px; color: var(--text-body); line-height: 1.7; padding-left: 16px; position: relative; }
+    .procedure-block__list li::before { content: "•"; position: absolute; left: 0; color: var(--text-muted); }
+    .procedure-block__list li strong { color: #e2e8f0; font-weight: 500; }
+    .procedure-block__cost { font-size: 14px; font-weight: 500; color: var(--metric-green); margin-bottom: 16px; }
+    .procedure-block__actions { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; font-family: 'Roboto', sans-serif; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn--primary { background: var(--btn-primary); color: #ffffff; }
+    .btn--ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .detail-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+    .demo-banner { background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.25); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .demo-banner__icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--amber); }
+    .demo-banner__content { flex: 1; }
+    .demo-banner__title { font-size: 14px; font-weight: 500; color: var(--amber); margin-bottom: 4px; }
+    .demo-banner__text { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+    .demo-notice { margin-top: 12px; padding: 10px 14px; background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.2); border-radius: 6px; font-size: 12px; color: var(--amber); line-height: 1.5; animation: fadeInNotice 0.3s ease; }
+    @keyframes fadeInNotice { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .play-item__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .play-item__meta-left { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .play-item__meta-right { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+    .detail-progress { margin-top: 24px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .detail-progress__label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+    .detail-progress__bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .detail-progress__fill { height: 100%; border-radius: 4px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    @keyframes fillBar { from { width: 0; } }
+    .detail-progress__pct { font-size: 14px; font-weight: 500; text-align: right; }
+  </style>
+</head>
+<body>
+
+  <div class="demo-banner">
+    <div class="demo-banner__icon">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+    </div>
+    <div class="demo-banner__content">
+      <div class="demo-banner__title">Demo Mode Active</div>
+      <div class="demo-banner__text">This is a demonstration of the Patient Genius platform built using Resurgens Orthopaedics' market data. Strategic plays, competitor analysis, and recommendations shown here are illustrative of how the system surfaces opportunities mid-engagement. Year-two plays focus on harvesting the depth of Resurgens' existing infrastructure (25 offices, ~100 surgeons, 9 service lines, Mako program) rather than building foundations.</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="pulse-dot" id="unread-pulse"></div>
+      <div class="stat-card__value" style="color: var(--metric-red);" id="unread-count">3</div>
+      <div class="stat-card__label">Unread Opportunities</div>
+      <div class="stat-card__subtitle">New plays to review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-green);">487</div>
+      <div class="stat-card__label">Credits Remaining</div>
+      <div class="stat-card__subtitle">Year 2 Allocation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-blue);">712.4</div>
+      <div class="stat-card__label">Million Data Points</div>
+      <div class="stat-card__subtitle">Atlanta Metro - 25 markets, 14 Months</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-purple);">6</div>
+      <div class="stat-card__label">Next Strategy Session</div>
+      <div class="stat-card__subtitle">May 5, 2026</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+
+    <div class="col-left">
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">In Progress</span>
+          <span class="count-pill count-pill--blue">3</span>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-1">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Procedure Schema Layer: 9 Service Lines</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">62%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 62%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-2">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">McDonough Surgery Center Launch SEO</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">75%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 75%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-3">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Provider Page E-E-A-T Refresh: Wave 1 (40 of 100)</span>
+            <span class="play-item-ip__pct" style="color: var(--amber);">45%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 45%; background: var(--amber);"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">Opportunities</span>
+          <span class="count-pill count-pill--red" id="recommended-badge">3 new</span>
+        </div>
+
+        <div class="play-item selected" data-play-id="rec-1" id="play-rec-1">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Mako Procedure Cluster Expansion</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">52 Credits</span>
+              <span class="badge badge--procedure">Procedure Hub Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item" data-play-id="rec-2" id="play-rec-2">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">AI Overview Recovery: Outpatient Joint Replacement</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">AI LLM Tracker</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">46 Credits</span>
+              <span class="badge badge--procedure">AI Engine Accelerator</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item" data-play-id="rec-3" id="play-rec-3">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Provider Page SEO at Scale (~100 Surgeons)</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">38 Credits</span>
+              <span class="badge badge--procedure">E-E-A-T Scale Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-4" id="play-rec-4">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Spine Sub-Blog Content Velocity</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Content Audit</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">29 Credits</span>
+              <span class="badge badge--procedure">Content Velocity</span>
+            </div>
+          </div>
+        </div>
+
+        <span class="toggle-link" id="toggle-completed">Show 3 completed plays</span>
+
+        <div class="completed-section" id="completed-section">
+          <div class="play-item-completed" data-play-id="comp-1">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Q1 GBP Optimization: 25 Locations</span>
+            </div>
+            <div class="play-item-completed__outcome">+24% direction requests across the network</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-2">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Castle Connolly Top Doctor Award Schema</span>
+            </div>
+            <div class="play-item-completed__outcome">31 surgeons with award badges in SERP</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-3">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Atlanta Metro Competitive Landscape Refresh</span>
+            </div>
+            <div class="play-item-completed__outcome">31 metro competitors mapped; OrthoAtlanta + Emory primary</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var ICON_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="#2db5b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.5"/><circle cx="15" cy="14" r="1.5"/><path d="M12 2v4"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>';
+    var ICON_RADAR = '<svg viewBox="0 0 24 24" fill="none" stroke="#4e9df7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>';
+    var ICON_AUDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#f7a600" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>';
+    var ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+    var ICON_LAUNCH_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1h6v6"/><path d="M13 1L6 8"/><path d="M11 8v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/></svg>';
+    var ICON_X_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3L3 11"/><path d="M3 3l8 8"/></svg>';
+    var ICON_GBP = '<svg viewBox="0 0 24 24" fill="none" stroke="#36d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    var ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef6a5e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    var ICON_CODE = '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>';
+
+    var PLAYS = {
+
+      "rec-1": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Mako Procedure Cluster Expansion",
+        query: 'content depth analysis for /robotics/mako and the absent procedure-specific sub-pages (TKA, partial knee, THA) that competitors are using to outrank Resurgens on robotic terms',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Resurgens\' surgeons have crossed <span class="hl-green">500+ Mako joint replacements</span> and the practice now operates a Mako-equipped <span class="hl-green">31,000 sq ft surgery center in McDonough</span> (2 ORs + 2 procedure rooms). Despite this, <span class="hl-green">/robotics/mako</span> exists as a single hub page with no procedure-specific sub-pages. Search demand for "Mako robotic knee replacement Atlanta" runs <span class="hl-green">+47% YoY</span>. <span class="hl-blue">Emory Orthopaedics &amp; Spine Center</span> currently holds <span class="hl-green">positions #1-2</span> on robotic TKA and THA queries; <span class="hl-blue">OrthoAtlanta</span> sits at #3-4 with a 5-page robotic cluster Resurgens does not match.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is the largest unfortified moat in the Resurgens portfolio. The 500+ Mako case-volume claim, the new McDonough ASC, and the 100-surgeon roster are competitive advantages that should be impossible for <span class="hl-blue">Emory</span> and <span class="hl-blue">OrthoAtlanta</span> to outrank against, but the existing /robotics/mako hub page lacks the procedure-specific page architecture AI engines and Google reward. The fix is structural, not foundational. Build out the cluster (TKA, partial knee, THA) under the existing hub, attribute case volume and surgeon counts at the procedure level, and the practice recovers a defensive position it should already own. Year 2 work, not year 1.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a 4-page Mako procedure cluster anchored to the existing /robotics/mako hub: dedicated pages for Mako Total Knee Replacement, Mako Partial Knee Replacement, and Mako Total Hip Replacement, each at <span class="hl-green">1,800-2,200 words</span> with surgeon attribution, the 500+ case-volume claim, candidacy criteria, recovery timeline, and full <span class="hl-green">MedicalProcedure + FAQPage</span> schema. Tie all to the McDonough ASC for southern metro intent. Forecasted: recover positions #1-2 on <span class="hl-green">9 of the 12 robotic-procedure queries</span> within 60-75 days and unlock <span class="hl-green">+520 monthly organic visits</span> at maturity, with the highest conversion velocity in the practice mix.'
+          }
+        ],
+        procedure: {
+          title: "Procedure Hub Build",
+          bullets: [
+            { bold: "Cluster Architecture:", text: "Restructure /robotics/mako as the cornerstone hub with three new procedure pages (Mako TKA, Mako Partial Knee, Mako THA) nested beneath. Define internal linking and breadcrumb structure." },
+            { bold: "Procedure Pages:", text: "Each new page at 1,800-2,200 words with surgeon attribution across the joint replacement bench, 500+ case volume claim surfaced in candidacy and outcomes sections, recovery timeline, and full MedicalProcedure + FAQPage schema." },
+            { bold: "McDonough ASC Tie-In:", text: "Cross-link the new Mako-equipped McDonough surgery center on every procedure page. Surface the 31,000 sq ft / 2 OR + 2 procedure room facility detail in same-day candidacy sections." },
+            { bold: "Defensive Tracking:", text: "Daily SERP and AI Overview monitoring on 12 robotic-procedure queries plus 14 long-tail variants. Specific tracking on Emory and OrthoAtlanta movement to confirm recapture." }
+          ],
+          cost: "52 Credits"
+        }
+      },
+
+      "rec-2": {
+        source: "AI LLM Tracker",
+        sourceIcon: ICON_ROBOT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "AI Overview Recovery: Outpatient Joint Replacement",
+        query: 'AI Overview citation tracking for "outpatient joint replacement Atlanta," "same-day joint replacement Atlanta," and 9 related outpatient joint queries Resurgens operationally owns but is losing on AI surfaces',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Resurgens promotes <span class="hl-green">Outpatient Joint Replacement as a distinct service line</span> (one of 9), runs the program operationally across multiple ASCs including the new McDonough Mako center, and has the surgical bench to deliver it at scale. AI Visibility on <span class="hl-green">"outpatient joint replacement Atlanta"</span> and <span class="hl-green">"same-day total knee replacement Atlanta"</span> has slipped from <span class="hl-green">74/100</span> in February to <span class="hl-green">59/100</span> in late April. <span class="hl-blue">Emory Orthopaedics</span>, <span class="hl-blue">Peachtree Orthopedics</span>, and <span class="hl-blue">OrthoAtlanta</span> are now being cited in Google AI Overviews for <span class="hl-green">8 of the 11</span> outpatient joint queries Resurgens should own.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'The drop is structural, not operational. <span class="hl-blue">Peachtree Orthopedics</span> recently restructured their outpatient joint pages with physician-bylined FAQ blocks and HowTo schema for the same-day pathway, exactly the format AI engines lift cleanly. Resurgens\' outpatient joint service line page leads on operational depth and McDonough ASC infrastructure but presents the content as marketing prose rather than AI-liftable Q&amp;A. Three of the 8 displaced citations went to procedure-specific Q&amp;A blocks on competitor pages, not their service line overviews. The asset is in place; the page structure isn\'t.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Restructure the Outpatient Joint Replacement service line page (and its sister Outpatient Spine Program page in a phase 2) with physician-attributed FAQ blocks, HowTo schema for the same-day surgical pathway, candidacy criteria with explicit medical inclusion/exclusion, and a comparison block (outpatient vs. inpatient). Pair with <span class="hl-green">4 supporting Q&amp;A blog posts</span>. Forecasted: recover <span class="hl-green">7-9 of the 8 displaced citations</span> within 45-60 days and lift AI Visibility back above the 70/100 threshold across the outpatient joint query set.'
+          }
+        ],
+        procedure: {
+          title: "AI Engine Accelerator",
+          bullets: [
+            { bold: "AI Citation Audit:", text: "Map current AI Overview citations across the 11 outpatient joint queries. Capture exact text snippets being lifted by Emory, Peachtree, and OrthoAtlanta, plus the underlying competitor page structures." },
+            { bold: "Service Line Restructure:", text: "Rebuild the Outpatient Joint Replacement page with FAQPage + HowTo + MedicalProcedure schema. Surface candidacy, same-day pathway, McDonough ASC infrastructure, and recovery in physician-attributed Q&amp;A blocks." },
+            { bold: "Supporting Content:", text: "Publish 4 procedure-specific Q&amp;A posts (same-day TKA candidacy, outpatient vs. inpatient, recovery week-by-week, McDonough ASC walkthrough) interlinked with the service line page." },
+            { bold: "Validation:", text: "Daily AI Overview tracking for 60 days post-deployment across the 11 outpatient queries plus 6 long-tail variants. Confirm citation recapture against Emory and Peachtree." }
+          ],
+          cost: "46 Credits"
+        }
+      },
+
+      "rec-3": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Provider Page SEO at Scale (~100 Surgeons)",
+        query: 'phased E-E-A-T deployment opportunity across all ~100 Resurgens surgeon profiles, the largest under-optimized asset in the practice',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Resurgens has approximately <span class="hl-green">100 physicians</span> (orthopedic surgeons + physiatrists) supported by PAs and NPs across 25 metro Atlanta offices. Current provider pages average <span class="hl-green">280-340 words</span> with minimal Physician schema and inconsistent credentials presentation. <span class="hl-green">31 surgeons</span> were named 2025 Castle Connolly Top Doctors but only the dedicated Castle Connolly schema (deployed in comp-2) currently surfaces that signal in SERP. The full provider page asset remains the practice\'s largest under-optimized surface area.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'No competitor in the metro has a 100-surgeon roster. <span class="hl-blue">OrthoAtlanta</span> runs ~40 physicians, <span class="hl-blue">Peachtree Orthopedics</span> 35 fellowship-trained, <span class="hl-blue">Emory</span> the academic system. If every Resurgens surgeon page were brought to the same E-E-A-T standard the Castle Connolly award schema demonstrates is achievable, the cumulative organic surface area would dwarf any competitor in Atlanta. The bottleneck isn\'t strategy or signal availability; it\'s phased production at scale. Wave 1 (40 surgeons across Spine and Joint Replacement) is already in flight as ip-3. This play funds Waves 2 and 3 (the remaining ~60 surgeons across the other 7 service lines).'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Phased rollout of E-E-A-T-grade provider pages across the remaining <span class="hl-green">~60 surgeons</span> after Wave 1 completes. Each refreshed page expanded to <span class="hl-green">800-1,000 words</span> with full Physician schema, board certifications, fellowships, residencies, named procedure expertise, hospital affiliations, publications, and Castle Connolly/award integration where applicable. Target Knowledge Panel eligibility on every surgeon-name search. Forecasted: <span class="hl-green">+1,800 monthly organic visits</span> across the surgeon-name search universe at maturity and a measurable lift in branded search conversion across the practice.'
+          }
+        ],
+        procedure: {
+          title: "E-E-A-T Scale Build",
+          bullets: [
+            { bold: "Wave Structure:", text: "Wave 2 = 30 surgeons across Sports Medicine, Hand &amp; Upper Extremity, and Foot &amp; Ankle. Wave 3 = remaining ~30 surgeons across General Ortho, Pain Management, and Outpatient Spine Program. Each wave a 6-week sprint." },
+            { bold: "Page Template:", text: "800-1,000 word expanded bios, full Physician + MedicalOrganization schema, board certifications, fellowships, residencies, procedure expertise, hospital affiliations, publications, and awards." },
+            { bold: "Award Integration:", text: "Carry forward the Castle Connolly schema pattern from comp-2 across all 31 award recipients in the new template. Build identical infrastructure for future award cycles." },
+            { bold: "Tracking:", text: "Knowledge Panel eligibility monitoring on all surgeon names, branded search ranking baseline pre/post each wave, contribution to AI Overview citations on procedure queries." }
+          ],
+          cost: "38 Credits"
+        }
+      },
+
+      "rec-4": {
+        source: "Content Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Spine Sub-Blog Content Velocity",
+        query: 'content cadence audit for the /news/spine sub-blog, currently under-populated relative to Resurgens\' spine practice size and competitive pressure from Emory',
+        sections: [
+          {
+            label: "The Data",
+            body: 'The <span class="hl-green">/news/spine</span> sub-blog exists structurally but has been published to inconsistently. Current cadence runs <span class="hl-green">1-2 posts per quarter</span>; the spine practice generates surgical volume that should support <span class="hl-green">2-3 posts per month</span>. Resurgens\' Spine and Outpatient Spine Program are both promoted as distinct service lines with substantial surgeon coverage, but the supporting content cluster is thin. <span class="hl-blue">Emory University Orthopaedics &amp; Spine Hospital</span> (the only ortho/spine-dedicated hospital in Atlanta) and <span class="hl-blue">Peachtree Orthopedics</span> are both publishing 4-6 spine pieces per month and capturing the topical authority signals.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'This is a content velocity gap, not a content quality gap. The /news/spine sub-blog architecture exists, the topic taxonomy is in place, and the surgeon bench can support physician-bylined content at higher cadence. The opportunity is to systematize a cluster build-out: keyword-mapped topic queue, surgeon-attributed content production, and consistent monthly publishing. Atlanta is contested spine territory (<span class="hl-blue">Emory</span> operates the only ortho/spine-dedicated hospital in metro inside its 180,000 sq ft Brookhaven Musculoskeletal Institute), so passive content cadence is a competitive risk on top of the missed organic volume.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Content velocity program: <span class="hl-green">12 spine articles in the first 90 days</span> across procedure deep-dives (cervical ADR, lumbar fusion, MIS spine), condition guides (sciatica, herniated disc, spinal stenosis), and outpatient spine candidacy posts that funnel into the Outpatient Spine Program service line page. Tied to surgeon bylines and full schema. Forecasted: <span class="hl-green">+340 monthly organic visits</span> across spine queries within 6 months, with topical authority compounding in months 6-12.'
+          }
+        ],
+        procedure: {
+          title: "Content Velocity",
+          bullets: [
+            { bold: "Topic Queue:", text: "Build 24-topic editorial queue mapped to high-intent spine keywords. First 12 prioritized for the 90-day sprint, second 12 queued for months 4-6." },
+            { bold: "Production Cadence:", text: "Monthly publishing rhythm of 4 articles per month, each surgeon-bylined with FAQ schema and internal linking to the relevant Spine or Outpatient Spine Program service line page." },
+            { bold: "Funnel Architecture:", text: "Each post engineered to feed conversion volume into either the Spine service line, Outpatient Spine Program, or a specific procedure page. Track source attribution at the page level." },
+            { bold: "Tracking:", text: "Monthly topical authority score on spine queries, organic traffic by post, and conversion attribution from /news/spine to service line pages over a 6-month measurement window." }
+          ],
+          cost: "29 Credits"
+        }
+      },
+
+      "ip-1": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Procedure Schema Layer: 9 Service Lines",
+        progress: 62,
+        query: "MedicalProcedure + FAQPage + HowTo schema deployment across all 9 Resurgens service line pages and the top 60 procedure pages",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Phase 1 (architecture and template) and Phase 2 (high-priority page deployment) are complete. <span class="hl-green">38 of 60 priority procedure pages</span> now have full MedicalProcedure + FAQPage + HowTo schema deployed, alongside <span class="hl-green">7 of 9 service line pages</span>. Average entity count per page has moved from <span class="hl-green">1.4</span> to <span class="hl-green">8.6</span>. Rich result eligibility confirmed in Search Console for all 38 deployed procedure pages plus the 7 service line pages.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Performance from the deployed set is tracking ahead of forecast. Average <span class="hl-green">+27% impressions</span> and <span class="hl-blue">+18% click-through</span> across the 38 procedure pages in the 30 days following each schema deployment. The Joint Replacement service line page recovered an AI Overview citation on "joint replacement Atlanta" within 16 days of schema deployment, and four procedure pages (rotator cuff repair, ACL reconstruction, lumbar fusion, carpal tunnel release) gained AI Overview citations within 21 days. Schema is also exposing the McDonough ASC and Mako program entities consistently, which feeds directly into rec-1 and rec-2.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Remaining 22 procedure pages and 2 service line pages (Pain Management, Outpatient Spine Program) scoped for deployment over the next 4-5 weeks. Once complete, Resurgens will have full structured data coverage across the entire 9-service-line + 60-procedure asset, the largest schema deployment in the Atlanta orthopedic market and the foundation for sustained AI Overview citation gains heading into Q3.'
+          }
+        ],
+        procedure: {
+          title: "Procedure Schema Layer: 9 Service Lines",
+          bullets: [
+            { bold: "Completed:", text: "Schema architecture, deployment on 38 of 60 priority procedure pages and 7 of 9 service line pages, Search Console validation across all" },
+            { bold: "In Progress:", text: "Remaining 22 procedure pages plus Pain Management and Outpatient Spine Program service line pages (62% overall)" },
+            { bold: "Next:", text: "Final QA pass, AI Overview monitoring activation, expansion into condition pages and the /resource-center / /health-tips clusters in Q3" }
+          ],
+          cost: "58 Credits (allocated)"
+        }
+      },
+
+      "ip-2": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "McDonough Surgery Center Launch SEO",
+        progress: 75,
+        query: "new ASC content build and supporting geo-page cluster for the new Mako-equipped McDonough surgery center",
+        sections: [
+          {
+            label: "The Data",
+            body: 'New <span class="hl-green">31,000 sq ft surgery center in McDonough</span> with 2 ORs and 2 procedure rooms launched as the southern metro Mako anchor. Phase 1 (facility hub page and Resurgens Surgery Center cross-domain coordination with resurgens-sc.com) is complete. Phase 2 (geo-page cluster supporting McDonough and surrounding south metro markets) is <span class="hl-green">75% deployed</span>: facility hub live, <span class="hl-green">/orthopedics-mcdonough-ga</span> refreshed and expanded, 6 of 8 supporting geo-pages drafted (Stockbridge, Locust Grove, Hampton, Griffin, Jonesboro, Conyers), 2 still in queue.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'The McDonough ASC is the highest-leverage geographic move Resurgens has made in the past 18 months. South metro is contested by independent practices and hospital systems, and the new Mako-equipped facility directly addresses both same-day joint replacement demand and Mako case-volume capacity. Initial 60-day performance: McDonough geo-page moved from position <span class="hl-green">#7 to #2</span> for "orthopedic surgeon McDonough GA," and the facility page is already capturing impressions on commercial-intent ASC queries previously dominated by hospital-owned facilities.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Final 2 geo-pages publish in 8-12 days. After publication, the play moves into a 60-day monitoring window. The McDonough facility hub also feeds the Mako Procedure Cluster (rec-1) since the McDonough ASC is the natural anchor for southern metro Mako case volume. Local pack performance for McDonough has already shifted measurably and is tracking toward the +35% projection across the south metro corridor.'
+          }
+        ],
+        procedure: {
+          title: "McDonough Surgery Center Launch SEO",
+          bullets: [
+            { bold: "Completed:", text: "Facility hub page, /orthopedics-mcdonough-ga refresh, cross-domain coordination with resurgens-sc.com, 6 of 8 supporting geo-pages drafted" },
+            { bold: "In Progress:", text: "Final 2 geo-pages (Hampton, Conyers) in physician review, Mako case-volume claim integration on the facility hub (75% overall)" },
+            { bold: "Next:", text: "Final geo-pages publish, integration with rec-1 Mako Procedure Cluster, 60-day SERP monitoring across south metro queries" }
+          ],
+          cost: "34 Credits (allocated)"
+        }
+      },
+
+      "ip-3": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Provider Page E-E-A-T Refresh: Wave 1 (40 of 100)",
+        progress: 45,
+        query: "first wave of E-E-A-T-grade provider page refresh across 40 surgeons in the Spine and Joint Replacement service lines",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Wave 1 covers <span class="hl-green">40 surgeons</span> across the Spine and Joint Replacement service lines, the two highest-revenue verticals. Phase 1 (template and Physician schema architecture) is complete. Phase 2 (production) is in progress: <span class="hl-green">18 of 40</span> pages drafted, 12 in physician review, 10 still in queue. The new template runs <span class="hl-green">820-1,040 words</span> per surgeon (up from a 280-340 word baseline) with full Physician schema, board certifications, fellowships, named procedure expertise, hospital affiliations, publications, and Castle Connolly award integration where applicable.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Wave 1 is intentionally focused on the two service lines with the highest commercial-intent search volume and the largest competitive pressure from <span class="hl-blue">Emory</span> (spine) and <span class="hl-blue">OrthoAtlanta</span> (joint replacement). Early performance from the 18 deployed pages is encouraging: <span class="hl-green">11 surgeons</span> gained Knowledge Panel eligibility on branded surgeon-name searches within 30 days, and 4 gained inclusion in AI Overview responses for procedure queries (e.g., "lumbar fusion Atlanta," "robotic knee replacement Atlanta"). E-E-A-T density on the deployed roster has moved from <span class="hl-green">38/100</span> to <span class="hl-green">79/100</span>.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Wave 1 completion expected in 5-6 weeks. Performance from the 18 deployed pages will validate the template before Waves 2 and 3 (the remaining ~60 surgeons covered under rec-3) begin. Wave 1 is also the primary surgeon attribution layer feeding rec-1 (Mako Procedure Cluster) and rec-2 (Outpatient Joint AI Recovery), since Joint Replacement surgeons are core to both plays.'
+          }
+        ],
+        procedure: {
+          title: "Provider Page E-E-A-T Refresh: Wave 1 (40 of 100)",
+          bullets: [
+            { bold: "Completed:", text: "Template + Physician schema architecture, 18 of 40 surgeon pages drafted with full E-E-A-T template" },
+            { bold: "In Progress:", text: "Physician review for 12 pages, production for remaining 10 (45% overall)" },
+            { bold: "Next:", text: "Complete Wave 1 deployment, validate template performance, begin Wave 2 (30 surgeons in Sports Med / Hand / Foot &amp; Ankle) under rec-3" }
+          ],
+          cost: "44 Credits (allocated)"
+        }
+      },
+
+      "comp-1": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Q1 GBP Optimization: 25 Locations",
+        query: "Google Business Profile refresh across all 25 Resurgens metro Atlanta office locations",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed all <span class="hl-green">25 Resurgens Google Business Profiles</span> in February-March across the Central, North, East, Southwest, Northwest, and south metro (McDonough, Fayetteville) clusters. Corrected primary categories, expanded service descriptions to surface all 9 service lines, deployed photo updates from coordinated practice shoots in each regional cluster, refreshed Q&amp;A seeding, and added structured posts for Q2 procedure focuses (Mako joint replacement, outpatient joint, outpatient spine).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Across all 25 locations: <span class="hl-green">+24% direction requests</span>, <span class="hl-blue">+19% profile views</span>, and <span class="hl-green">+15% calls</span> in the 60 days post-deployment. Strongest lifts in <span class="hl-blue">McDonough (+58%, ASC effect)</span> and <span class="hl-blue">Braselton (+41%)</span>, where prior GBP content had been thinnest. Central cluster (Midtown, Dunwoody, Sandy Springs, Windy Hill) saw smaller % gains but the largest absolute volume increase given established traffic baselines. The 25-office network now has consistent category, photo, and service line coverage.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'GBP optimization is now integrated into Resurgens\' ongoing care across the full 25-office network. Weekly post schedule, monthly review response cadence, and quarterly photo refreshes are standardized. The recently expanded footprint (from 23 to 25 offices) is fully covered. Next refresh cycle scheduled for July 2026 to capture summer search behavior, with priority on continuing to surface the McDonough ASC and Mako program signals on the southern metro profiles.'
+          }
+        ],
+        procedure: {
+          title: "Q1 GBP Optimization: 25 Locations",
+          bullets: [
+            { bold: "Completed:", text: "All 25 profiles fully refreshed across Central, North, East, Southwest, Northwest, and south metro clusters with categories, descriptions, photos, Q&amp;A, and Q2 posts" },
+            { bold: "Result:", text: "+24% direction requests, +19% profile views, +15% calls across the network; +58% lift in McDonough" },
+            { bold: "Status:", text: "Ongoing maintenance integrated, next refresh July 2026" }
+          ],
+          cost: "32 Credits (spent)"
+        }
+      },
+
+      "comp-2": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Castle Connolly Top Doctor Award Schema",
+        query: "Award schema deployment across the 31 Castle Connolly Top Doctor 2025 recipients on the Resurgens roster",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Deployed <span class="hl-green">Award + Physician schema</span> across the <span class="hl-green">31 Resurgens surgeons</span> named 2025 Castle Connolly Top Doctors. Each recipient\'s page now exposes the award entity, year, awarding organization, and specialty in machine-readable structured data, alongside an updated bio block surfacing the recognition. Pages were also linked from a new Awards &amp; Recognition hub page consolidating the practice\'s credentials.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Within 30 days of deployment, all <span class="hl-green">31 surgeons</span> gained award badges in branded surgeon-name SERP results, and <span class="hl-green">19 surgeons</span> gained Knowledge Panel inclusion of the Castle Connolly recognition. Branded search click-through rate on the 31 surgeon names lifted <span class="hl-green">+22%</span> in the 60-day window post-deployment. The schema pattern is now productized as the template for any future award cycle (American Health Council, regional Top Doctor lists, fellowship recognitions).'
+          },
+          {
+            label: "The Opportunity",
+            body: 'This work serves as the validation pilot for the broader Provider Page E-E-A-T Refresh program (ip-3 + rec-3). Performance from the 31 award schema deployments confirmed the entity-density and branded-search lift hypothesis the full program is built on. The Award schema layer also carries forward into every new surgeon page in Waves 1, 2, and 3.'
+          }
+        ],
+        procedure: {
+          title: "Castle Connolly Top Doctor Award Schema",
+          bullets: [
+            { bold: "Completed:", text: "Award + Physician schema across all 31 Castle Connolly Top Doctor 2025 recipients, Awards &amp; Recognition hub page launched" },
+            { bold: "Result:", text: "31 surgeons with award badges in SERP, 19 with Knowledge Panel inclusion, +22% branded search CTR on the recipient set" },
+            { bold: "Status:", text: "Pattern productized; carries forward into all future award cycles and full provider page roster refresh" }
+          ],
+          cost: "18 Credits (spent)"
+        }
+      },
+
+      "comp-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Atlanta Metro Competitive Landscape Refresh",
+        query: "competitor identification and tracking refresh for the metro Atlanta orthopedic market with Pinnacle Orthopaedics excluded as sister practice",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed Resurgens\' competitive tracking set for 2026: <span class="hl-green">31 metro Atlanta competitors</span> profiled (up from 22 in 2025) with current location count, surgeon roster, schema implementation, blog cadence, paid search activity, and estimated organic traffic. <span class="hl-blue">Pinnacle Orthopaedics</span> was explicitly excluded from the tracking set as a sister UMP practice. Full ranking baselines refreshed across <span class="hl-green">3,600 keywords</span>. Primary tracking weight assigned to <span class="hl-blue">Piedmont Orthopedics | OrthoAtlanta</span> (closest 1:1 footprint match, ~25 offices, ~40 physicians, formed Feb 2020 with Piedmont Healthcare) and <span class="hl-blue">Emory Orthopaedics &amp; Spine Center</span> (academic system anchor, only ortho/spine-dedicated hospital in Atlanta).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Most consequential 2026 findings: <span class="hl-blue">OrthoAtlanta</span> consolidated content across the Piedmont Healthcare brand, improving topical authority on core service line queries and gaining ground on robotic and sports medicine terms. <span class="hl-blue">Emory</span> deepened the Brookhaven Musculoskeletal Institute content footprint (180,000 sq ft facility + dedicated ortho/spine hospital) and is now the lead authority on academic-leaning queries including AI Overview citations on procedure-specific spine and joint replacement terms. <span class="hl-blue">Peachtree Orthopedics</span> (premium-positioned independent, 9 offices, 35 fellowship-trained surgeons) made measurable gains on outpatient joint queries, directly informing rec-2.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Refreshed tracking is now feeding the AI model continuously. All four current opportunity plays (rec-1 through rec-4) are direct outputs of the refreshed competitive view: rec-1 from the Emory and OrthoAtlanta robotic share-of-voice gain, rec-2 from the Peachtree outpatient joint movement, rec-3 from the cumulative competitor surgeon-page benchmark, and rec-4 from the Emory spine content velocity gap. Tracking will refresh again at end of Q3.'
+          }
+        ],
+        procedure: {
+          title: "Atlanta Metro Competitive Landscape Refresh",
+          bullets: [
+            { bold: "Completed:", text: "31 metro competitors profiled (Pinnacle excluded as sister UMP practice); 3,600 keywords baselined; OrthoAtlanta and Emory established as primary tracking targets" },
+            { bold: "Result:", text: "All 4 active opportunity plays generated from the refreshed competitive view; Peachtree, OrthoAtlanta, and Emory movement directly informing rec-1 through rec-4" },
+            { bold: "Status:", text: "Continuous monitoring active; next full refresh at end of Q3" }
+          ],
+          cost: "16 Credits (spent)"
+        }
+      }
+    };
+
+    function renderDetail(playId) {
+      var play = PLAYS[playId];
+      if (!play) {
+        document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">Select a play to view details</div>';
+        return;
+      }
+      var sectionsHtml = play.sections.map(function(s) {
+        return '<div class="detail-section">' +
+          '<div class="detail-section__label">' + s.label + '</div>' +
+          '<div class="detail-section__body">' + s.body + '</div>' +
+        '</div>';
+      }).join('');
+      var bulletsHtml = play.procedure.bullets.map(function(b) {
+        return '<li><strong>' + b.bold + '</strong> ' + b.text + '</li>';
+      }).join('');
+      var isCompleted = playId.startsWith('comp-');
+      var isInProgress = playId.startsWith('ip-');
+      var progressHtml = '';
+      if (isInProgress) {
+        var pct = play.progress || 0;
+        var barColor = pct >= 60 ? 'var(--metric-green)' : 'var(--amber)';
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: ' + pct + '%; background: ' + barColor + ';"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: ' + barColor + ';">' + pct + '% Complete</div>' +
+          '</div>';
+      } else if (isCompleted) {
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: 100%; background: var(--metric-green);"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: var(--metric-green);">100% Complete</div>' +
+          '</div>';
+      }
+      var procedureHtml =
+        '<div class="procedure-block">' +
+          '<div class="procedure-block__header">' +
+            '<div class="procedure-block__icon">' + ICON_ROCKET + '</div>' +
+            '<span class="procedure-block__label">Recommended Strategic Play</span>' +
+          '</div>' +
+          '<div class="procedure-block__title">' + play.procedure.title + '</div>' +
+          '<ul class="procedure-block__list">' + bulletsHtml + '</ul>' +
+          '<div class="procedure-block__cost">Cost: ' + play.procedure.cost + '</div>' +
+          (!(isInProgress || isCompleted) ?
+            '<div class="procedure-block__actions">' +
+              '<button class="btn btn--primary" onclick="handleLaunch(\'' + playId + '\')">' + ICON_LAUNCH_SM + ' Launch Play</button>' +
+              '<button class="btn btn--ghost" onclick="handleDismiss(\'' + playId + '\')">' + ICON_X_SM + ' Dismiss</button>' +
+            '</div>' +
+            '<div id="demo-notice-area"></div>'
+          : '') +
+        '</div>';
+      var bottomHtml = (isInProgress || isCompleted) ? procedureHtml + progressHtml : procedureHtml;
+      var html =
+        '<div class="detail-header">' +
+          '<div class="detail-header__icon">' + play.sourceIcon + '</div>' +
+          '<span class="detail-header__source">' + play.source + '</span>' +
+          '<span class="badge ' + play.priorityClass + ' detail-header__priority">' + (isCompleted || isInProgress ? '' : 'Priority: ') + play.priority + '</span>' +
+        '</div>' +
+        '<div class="detail-title">' + play.title + '</div>' +
+        '<div class="detail-query-box">' + play.query + '</div>' +
+        sectionsHtml + bottomHtml;
+      document.getElementById('detail-panel').innerHTML = html;
+    }
+
+    var currentSelected = 'rec-1';
+    var unreadCount = 3;
+
+    function selectPlay(playId, element) {
+      document.querySelectorAll('.play-item.selected, .play-item-ip.selected, .play-item-completed.selected').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      if (element.classList.contains('play-item') && !element.classList.contains('read')) {
+        element.classList.add('read');
+        unreadCount = Math.max(0, unreadCount - 1);
+        document.getElementById('unread-count').textContent = unreadCount;
+        if (unreadCount > 0) {
+          document.getElementById('recommended-badge').textContent = unreadCount + ' new';
+        } else {
+          document.getElementById('recommended-badge').textContent = '0 new';
+          var pulse = document.getElementById('unread-pulse');
+          if (pulse) pulse.style.display = 'none';
+        }
+      }
+      currentSelected = playId;
+      renderDetail(playId);
+    }
+
+    document.querySelectorAll('.play-item').forEach(function(el) {
+      el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+    });
+    document.querySelectorAll('.play-item-ip').forEach(function(el) {
+      el.addEventListener('click', function() {
+        document.querySelectorAll('.play-item.selected, .play-item-completed.selected, .play-item-ip.selected').forEach(function(s) {
+          s.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        currentSelected = el.dataset.playId;
+        renderDetail(el.dataset.playId);
+      });
+    });
+    function bindCompletedPlays() {
+      document.querySelectorAll('.play-item-completed').forEach(function(el) {
+        if (el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+      });
+    }
+    var toggleLink = document.getElementById('toggle-completed');
+    var completedSection = document.getElementById('completed-section');
+    var completedVisible = false;
+    toggleLink.addEventListener('click', function() {
+      completedVisible = !completedVisible;
+      if (completedVisible) {
+        completedSection.classList.add('visible');
+        toggleLink.textContent = 'Hide completed plays';
+        bindCompletedPlays();
+      } else {
+        completedSection.classList.remove('visible');
+        toggleLink.textContent = 'Show 3 completed plays';
+      }
+    });
+
+    function showDemoNotice(message) {
+      var area = document.getElementById('demo-notice-area');
+      if (!area) return;
+      var existing = area.querySelector('.demo-notice');
+      if (existing) existing.remove();
+      var notice = document.createElement('div');
+      notice.className = 'demo-notice';
+      notice.textContent = message;
+      area.appendChild(notice);
+    }
+    function handleLaunch(playId) {
+      showDemoNotice('This is a demo. In the live platform, this would launch the play and deduct credits from your balance.');
+    }
+    function handleDismiss(playId) {
+      showDemoNotice('This is a demo. In the live platform, this play would be dismissed and moved to your archive.');
+    }
+
+    renderDetail('rec-1');
+  </script>
+</body>
+</html>

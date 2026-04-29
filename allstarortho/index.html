@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strategic Plays Dashboard | All-Star Orthopaedics</title>
+
+  <!-- Google Fonts: Roboto 400, 500 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-page: #0e1520;
+      --bg-card: #1a2838;
+      --border: #283848;
+      --border-selected: #4e9df7;
+      --text-muted: #6b7a8d;
+      --text-body: #8a99ab;
+      --metric-red: #ef6a5e;
+      --metric-green: #36d399;
+      --metric-blue: #4e9df7;
+      --metric-purple: #8b5cf6;
+      --amber: #f7a600;
+      --btn-primary: #00529b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: auto; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-page); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    * { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-page); }
+    body { background: var(--bg-page); color: #e2e8f0; font-family: 'Roboto', sans-serif; font-weight: 400; font-size: 14px; line-height: 1.5; padding: 24px; }
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 24px 16px; text-align: center; position: relative; }
+    .stat-card__value { font-size: 52px; font-weight: 500; line-height: 1.1; margin-bottom: 4px; }
+    .stat-card__label { font-size: 16px; font-weight: 500; color: #e2e8f0; margin-bottom: 2px; }
+    .stat-card__subtitle { font-size: 13px; color: var(--text-muted); }
+    .pulse-dot { position: absolute; top: 12px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--metric-red); animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 106, 94, 0.5); } 50% { box-shadow: 0 0 0 6px rgba(239, 106, 94, 0); } }
+    .dashboard { display: flex; gap: 24px; align-items: flex-start; }
+    .col-left { width: 40%; min-width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 24px; }
+    .col-right { flex: 1; min-width: 0; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .section-header__title { font-size: 11px; font-weight: 500; letter-spacing: 1.2px; text-transform: uppercase; color: var(--text-muted); }
+    .count-pill { font-size: 11px; font-weight: 500; padding: 2px 10px; border-radius: 12px; line-height: 1.4; }
+    .count-pill--blue { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .count-pill--red { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .play-item-ip { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
+    .play-item-ip:hover { border-color: var(--text-muted); }
+    .play-item-ip.selected { border-color: var(--border-selected); }
+    .play-item-ip__header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .play-item-ip__title { font-size: 14px; font-weight: 500; color: #e2e8f0; }
+    .play-item-ip__pct { font-size: 13px; font-weight: 500; }
+    .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .progress-bar__fill { height: 100%; border-radius: 2px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    .play-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; position: relative; }
+    .play-item:hover { border-color: var(--text-muted); }
+    .play-item.selected { border-color: var(--border-selected); }
+    .play-item.read .play-item__title { color: var(--text-body); }
+    .play-item__unread-dot { position: absolute; top: 12px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--metric-red); }
+    .play-item.read .play-item__unread-dot { display: none; }
+    .play-item__title { font-size: 14px; font-weight: 500; color: #e2e8f0; margin-bottom: 6px; padding-right: 20px; }
+    .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+    .badge--source { background: rgba(78, 157, 247, 0.12); color: var(--metric-blue); }
+    .badge--critical { background: rgba(239, 106, 94, 0.12); color: var(--metric-red); }
+    .badge--medium { background: rgba(247, 166, 0, 0.12); color: var(--amber); }
+    .badge--credits { background: rgba(54, 211, 153, 0.12); color: var(--metric-green); }
+    .badge--procedure { background: rgba(139, 92, 246, 0.12); color: var(--metric-purple); }
+    .toggle-link { display: inline-block; font-size: 13px; color: var(--metric-blue); cursor: pointer; margin-top: 4px; user-select: none; }
+    .toggle-link:hover { text-decoration: underline; }
+    .completed-section { display: none; margin-top: 12px; }
+    .completed-section.visible { display: block; }
+    .play-item-completed { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; cursor: pointer; opacity: 0.6; transition: opacity 0.15s, border-color 0.15s; position: relative; }
+    .play-item-completed:hover { opacity: 0.85; border-color: var(--text-muted); }
+    .play-item-completed.selected { border-color: var(--border-selected); opacity: 0.85; }
+    .play-item-completed__header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .play-item-completed__check { color: var(--metric-green); font-size: 14px; flex-shrink: 0; }
+    .play-item-completed__title { font-size: 14px; font-weight: 500; color: var(--text-body); }
+    .play-item-completed__outcome { font-size: 12px; color: var(--metric-green); margin-left: 22px; }
+    .detail-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 28px; }
+    .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .detail-header__icon { width: 28px; height: 28px; flex-shrink: 0; }
+    .detail-header__source { font-size: 13px; font-weight: 500; color: var(--text-body); }
+    .detail-header__priority { margin-left: auto; }
+    .detail-title { font-size: 20px; font-weight: 500; color: #e2e8f0; margin-bottom: 16px; }
+    .detail-query-box { background: var(--bg-page); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; font-size: 13px; color: var(--text-body); margin-bottom: 20px; font-style: italic; }
+    .detail-section { margin-bottom: 18px; }
+    .detail-section__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: #e2e8f0; margin-bottom: 6px; }
+    .detail-section__body { font-size: 14px; color: var(--text-body); line-height: 1.6; }
+    .hl-green { background: rgba(54, 211, 153, 0.1); color: var(--metric-green); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .hl-blue { background: rgba(78, 157, 247, 0.1); color: var(--metric-blue); padding: 2px 6px; border-radius: 3px; font-weight: 500; }
+    .procedure-block { background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-top: 20px; }
+    .procedure-block__header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .procedure-block__icon { width: 22px; height: 22px; flex-shrink: 0; }
+    .procedure-block__label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+    .procedure-block__title { font-size: 18px; font-weight: 500; color: #e2e8f0; margin-bottom: 14px; }
+    .procedure-block__list { list-style: none; margin-bottom: 14px; }
+    .procedure-block__list li { font-size: 13px; color: var(--text-body); line-height: 1.7; padding-left: 16px; position: relative; }
+    .procedure-block__list li::before { content: "•"; position: absolute; left: 0; color: var(--text-muted); }
+    .procedure-block__list li strong { color: #e2e8f0; font-weight: 500; }
+    .procedure-block__cost { font-size: 14px; font-weight: 500; color: var(--metric-green); margin-bottom: 16px; }
+    .procedure-block__actions { display: flex; gap: 10px; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 500; font-family: 'Roboto', sans-serif; cursor: pointer; border: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn--primary { background: var(--btn-primary); color: #ffffff; }
+    .btn--ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .detail-empty { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+    .demo-banner { background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.25); border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .demo-banner__icon { width: 20px; height: 20px; flex-shrink: 0; margin-top: 1px; color: var(--amber); }
+    .demo-banner__content { flex: 1; }
+    .demo-banner__title { font-size: 14px; font-weight: 500; color: var(--amber); margin-bottom: 4px; }
+    .demo-banner__text { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+    .demo-notice { margin-top: 12px; padding: 10px 14px; background: rgba(247, 166, 0, 0.08); border: 1px solid rgba(247, 166, 0, 0.2); border-radius: 6px; font-size: 12px; color: var(--amber); line-height: 1.5; animation: fadeInNotice 0.3s ease; }
+    @keyframes fadeInNotice { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+    .play-item__meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .play-item__meta-left { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+    .play-item__meta-right { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+    .detail-progress { margin-top: 24px; background: var(--bg-page); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+    .detail-progress__label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; }
+    .detail-progress__bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
+    .detail-progress__fill { height: 100%; border-radius: 4px; width: 0; animation: fillBar 1.5s ease-out forwards; }
+    @keyframes fillBar { from { width: 0; } }
+    .detail-progress__pct { font-size: 14px; font-weight: 500; text-align: right; }
+  </style>
+</head>
+<body>
+
+  <div class="demo-banner">
+    <div class="demo-banner__icon">
+      <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/></svg>
+    </div>
+    <div class="demo-banner__content">
+      <div class="demo-banner__title">Demo Mode Active</div>
+      <div class="demo-banner__text">This is a demonstration of the Patient Genius platform built using All-Star Orthopaedics' market data. Strategic plays, competitor analysis, and recommendations shown here are illustrative of how the system surfaces opportunities mid-engagement. Year-two plays focus on extending wins from year one, not foundational rebuilds.</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="pulse-dot" id="unread-pulse"></div>
+      <div class="stat-card__value" style="color: var(--metric-red);" id="unread-count">2</div>
+      <div class="stat-card__label">Unread Opportunities</div>
+      <div class="stat-card__subtitle">New plays to review</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-green);">218</div>
+      <div class="stat-card__label">Credits Remaining</div>
+      <div class="stat-card__subtitle">Year 2 Allocation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-blue);">31.7</div>
+      <div class="stat-card__label">Million Data Points</div>
+      <div class="stat-card__subtitle">5 North DFW Markets, 14 Months</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card__value" style="color: var(--metric-purple);">11</div>
+      <div class="stat-card__label">Next Strategy Session</div>
+      <div class="stat-card__subtitle">May 10, 2026</div>
+    </div>
+  </div>
+
+  <div class="dashboard">
+
+    <div class="col-left">
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">In Progress</span>
+          <span class="count-pill count-pill--blue">3</span>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-1">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">URL Structure Consolidation</span>
+            <span class="play-item-ip__pct" style="color: var(--amber);">55%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 55%; background: var(--amber);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-2">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Argyle Market Launch SEO Push</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">70%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 70%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+        <div class="play-item-ip" data-play-id="ip-3">
+          <div class="play-item-ip__header">
+            <span class="play-item-ip__title">Provider Page E-E-A-T Refresh</span>
+            <span class="play-item-ip__pct" style="color: var(--metric-green);">85%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-bar__fill" style="width: 85%; background: var(--metric-green);"></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-header">
+          <span class="section-header__title">Opportunities</span>
+          <span class="count-pill count-pill--red" id="recommended-badge">2 new</span>
+        </div>
+
+        <div class="play-item selected" data-play-id="rec-1" id="play-rec-1">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Knee Replacement Hub: Southlake &amp; Flower Mound</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">SEO Audit</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">36 Credits</span>
+              <span class="badge badge--procedure">Procedure Hub Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item" data-play-id="rec-2" id="play-rec-2">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">AI Overview Recovery: Sports Medicine</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">AI LLM Tracker</span>
+              <span class="badge badge--critical">Critical</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">29 Credits</span>
+              <span class="badge badge--procedure">AI Engine Accelerator</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-3" id="play-rec-3">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Reputation Consolidation Across 4 Platforms</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Reputation Mgmt</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">19 Credits</span>
+              <span class="badge badge--procedure">Reputation Build</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="play-item read" data-play-id="rec-4" id="play-rec-4">
+          <div class="play-item__unread-dot"></div>
+          <div class="play-item__title">Hand Surgery Content Gap (Hahn)</div>
+          <div class="play-item__meta">
+            <div class="play-item__meta-left">
+              <span class="badge badge--source">Competitive Intel</span>
+              <span class="badge badge--medium">Medium</span>
+            </div>
+            <div class="play-item__meta-right">
+              <span class="badge badge--credits">21 Credits</span>
+              <span class="badge badge--procedure">Organic Gap Capture</span>
+            </div>
+          </div>
+        </div>
+
+        <span class="toggle-link" id="toggle-completed">Show 3 completed plays</span>
+
+        <div class="completed-section" id="completed-section">
+          <div class="play-item-completed" data-play-id="comp-1">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">Q1 GBP Optimization: 5 Locations</span>
+            </div>
+            <div class="play-item-completed__outcome">+29% direction requests across 5 North DFW offices</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-2">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">D Magazine "Top Doc" Schema Capture</span>
+            </div>
+            <div class="play-item-completed__outcome">8 surgeons now showing award badges in SERP</div>
+          </div>
+          <div class="play-item-completed" data-play-id="comp-3">
+            <div class="play-item-completed__header">
+              <span class="play-item-completed__check">&#10003;</span>
+              <span class="play-item-completed__title">North DFW Competitive Landscape Refresh</span>
+            </div>
+            <div class="play-item-completed__outcome">14 corridor competitors mapped, 4 ranking shifts flagged</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-right">
+      <div class="detail-panel" id="detail-panel"></div>
+    </div>
+
+  </div>
+
+  <script>
+    var ICON_ROBOT = '<svg viewBox="0 0 24 24" fill="none" stroke="#2db5b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="14" r="1.5"/><circle cx="15" cy="14" r="1.5"/><path d="M12 2v4"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/><path d="M2 14h2"/><path d="M20 14h2"/></svg>';
+    var ICON_RADAR = '<svg viewBox="0 0 24 24" fill="none" stroke="#4e9df7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>';
+    var ICON_AUDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="#f7a600" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>';
+    var ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+    var ICON_LAUNCH_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 1h6v6"/><path d="M13 1L6 8"/><path d="M11 8v4a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h4"/></svg>';
+    var ICON_X_SM = '<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3L3 11"/><path d="M3 3l8 8"/></svg>';
+    var ICON_GBP = '<svg viewBox="0 0 24 24" fill="none" stroke="#36d399" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+    var ICON_TARGET = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef6a5e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
+    var ICON_CODE = '<svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16,18 22,12 16,6"/><polyline points="8,6 2,12 8,18"/></svg>';
+
+    var PLAYS = {
+
+      "rec-1": {
+        source: "SEO Audit",
+        sourceIcon: ICON_AUDIT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "Knee Replacement Hub: Southlake & Flower Mound",
+        query: 'content depth and geo-targeting analysis for knee replacement queries in the North DFW corridor',
+        sections: [
+          {
+            label: "The Data",
+            body: 'All-Star\'s knee replacement page averages <span class="hl-green">680 words</span> across all geographies. Top-ranking competitor pages for "knee replacement Southlake TX" and "knee replacement Flower Mound" average <span class="hl-green">1,750+ words</span> with FAQ schema and candidacy/recovery sections. <span class="hl-blue">Texas Bone &amp; Joint</span> currently holds <span class="hl-green">positions #1-2</span> for both queries with their dedicated city + procedure landing pages.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'All-Star has the surgical credentials (Dr. Greenberg founded the practice on knee replacement; Dr. Runner is a recent fellowship-trained recon specialist) but is running a single shared knee replacement page across 5 office locations. <span class="hl-blue">Precision Orthopedics</span> in Southlake outranks All-Star on Southlake-modified queries despite a smaller surgical bench. The bottleneck is content architecture: one page cannot win five geo-modified searches. Texas Bone &amp; Joint, Precision, and Texas Health all run city-specific landing pages All-Star does not.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Build a knee replacement hub anchored by the existing page, with geo-modified satellite pages for Southlake, Flower Mound, Irving, Argyle, and Alliance. Each satellite gets unique copy (1,200+ words), surgeon attribution to that location\'s providers, FAQ schema, and recovery timeline. Forecasted <span class="hl-green">+380 monthly organic visits</span> across the cluster at maturity. Highest leverage in Southlake and Flower Mound where competition is most intense.'
+          }
+        ],
+        procedure: {
+          title: "Procedure Hub Build",
+          bullets: [
+            { bold: "Cornerstone Refresh:", text: "Expand main knee replacement page to 1,800 words with surgeon roster, MAKO/robotic options, and physician-bylined FAQ blocks." },
+            { bold: "Geo-Satellite Pages:", text: "Build 5 geo-targeted variants (Southlake, Flower Mound, Irving, Argyle, Alliance) each 1,200+ words with location-specific surgeon attribution." },
+            { bold: "Schema Deployment:", text: "MedicalProcedure, FAQPage, Physician schema across the cluster. Validate rich result eligibility." },
+            { bold: "Internal Linking:", text: "Build cross-links between hub, satellites, surgeon profiles, and supporting content. Establish topical authority cluster." }
+          ],
+          cost: "36 Credits"
+        }
+      },
+
+      "rec-2": {
+        source: "AI LLM Tracker",
+        sourceIcon: ICON_ROBOT,
+        priority: "Critical",
+        priorityClass: "badge--critical",
+        title: "AI Overview Recovery: Sports Medicine",
+        query: 'AI Overview citation tracking for sports medicine queries across the North DFW corridor',
+        sections: [
+          {
+            label: "The Data",
+            body: 'All-Star\'s AI Visibility score on sports medicine queries dropped from <span class="hl-green">66/100</span> in February to <span class="hl-green">53/100</span> in April. Google AI Overviews are now citing <span class="hl-blue">Texas Bone &amp; Joint</span> and <span class="hl-blue">Texas Health Orthopedic Specialists</span> for <span class="hl-green">9 of 13 tracked sports med keywords</span>, up from 4 of 13 in January.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'All-Star has Dr. Hurt (since 2009), Dr. Honig, Dr. Cantrell on sports med plus institutional history with local school athletics. The drop is not credentials, it\'s page structure. <span class="hl-blue">Texas Bone &amp; Joint</span> recently restructured their sports medicine pages with FAQ schema and surgeon-attributed Q&amp;A blocks. All-Star\'s sports med pages are written in narrative paragraphs that AI systems struggle to lift into citation snippets. The fix is reformatting, not rewriting.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Reformat the sports medicine hub plus 4 supporting condition/procedure pages with surgeon-bylined FAQ blocks, return-to-play timelines, and youth-athlete-specific Q&amp;A. Add MedicalProcedure and FAQPage schema. Forecasted to recapture <span class="hl-green">6-7 of the 9 displaced citations</span> within 45-60 days. Long-tail queries (high school injury return-to-play, ACL recovery teenagers, weekend warrior shoulder injury) will see strongest gains.'
+          }
+        ],
+        procedure: {
+          title: "AI Engine Accelerator",
+          bullets: [
+            { bold: "AI Citation Audit:", text: "Map all 13 sports med keywords currently tracked. Capture which competitor page snippets are being lifted and the structure that\'s winning." },
+            { bold: "Schema Retrofit:", text: "Add FAQPage, MedicalProcedure, HowTo schema across sports med hub plus 4 condition/procedure pages." },
+            { bold: "Q&amp;A Restructure:", text: "Reformat body copy into AI-liftable physician-attributed Q&amp;A blocks. Lean into Hurt/Honig/Cantrell named expertise." },
+            { bold: "Validation:", text: "60-day AI Overview tracking to confirm citation recapture across the 13 keyword set." }
+          ],
+          cost: "29 Credits"
+        }
+      },
+
+      "rec-3": {
+        source: "Reputation Mgmt",
+        sourceIcon: ICON_GBP,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Reputation Consolidation Across 4 Platforms",
+        query: 'reputation footprint analysis across Yelp, Healthgrades, Vitals, and Nextdoor',
+        sections: [
+          {
+            label: "The Data",
+            body: 'All-Star has unconsolidated review presence across <span class="hl-green">Yelp (Irving), Healthgrades (Southlake group profile), Vitals (multiple individual surgeon listings), Nextdoor</span>, plus Facebook, LinkedIn. Aggregate review count totals <span class="hl-green">340+ reviews</span>, but no platform shows the full picture. Healthgrades shows 4.6 average across 89 reviews; Yelp shows 3.2 across 41 reviews; Vitals split across surgeons.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Fragmented reviews dilute search visibility and make AI systems pick the lowest-rated surface as their summary. Right now AI Overviews and ChatGPT responses about All-Star tend to surface the Yelp 3.2 (lowest) rather than the Healthgrades 4.6 (highest, most volume) because Yelp wins on schema visibility. A consolidation push (claiming and unifying profiles, deploying review request automation, responding to all open negative reviews) typically lifts aggregate visible rating by 0.4-0.6 stars within 90 days and improves AI summarization.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Claim and standardize all 8 review platform profiles, deploy the PG Reputation engine to automate post-visit review requests across all 5 office locations, train front desk on review response cadence, and run a consolidation pass on all open unresponded reviews. Forecasted increase: <span class="hl-green">+0.5 stars aggregate visible</span> on Yelp and Vitals, <span class="hl-green">+180 new reviews</span> across platforms in first 90 days, and AI summary improvement on branded queries.'
+          }
+        ],
+        procedure: {
+          title: "Reputation Build",
+          bullets: [
+            { bold: "Platform Audit:", text: "Claim, verify, and standardize NAP across Yelp, Healthgrades, Vitals, Nextdoor, Facebook, and LinkedIn for All-Star and each individual surgeon." },
+            { bold: "Review Automation:", text: "Deploy post-visit review request automation across all 5 offices. Default to Healthgrades and Google for new requests." },
+            { bold: "Response Cadence:", text: "Backfill responses to all open unresponded reviews (positive and negative). Train front desk on weekly response cadence going forward." },
+            { bold: "AI Summary Validation:", text: "Track AI Overview and ChatGPT summary text on branded All-Star queries pre/post deployment to validate sentiment lift." }
+          ],
+          cost: "19 Credits"
+        }
+      },
+
+      "rec-4": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Medium",
+        priorityClass: "badge--medium",
+        title: "Hand Surgery Content Gap (Hahn)",
+        query: 'content depth and ranking analysis for hand and wrist surgery queries',
+        sections: [
+          {
+            label: "The Data",
+            body: 'Dr. Michael Hahn is All-Star\'s hand subspecialist but the practice has only <span class="hl-green">2 hand-specific pages</span> (general overview + carpal tunnel). <span class="hl-blue">Texas Bone &amp; Joint</span> has 8 hand-specific pages including dedicated procedure pages for trigger finger, De Quervain\'s, ganglion cyst, and Dupuytren\'s. Their hand surgeon (Dr. Jiuliano) ranks ahead of Hahn for <span class="hl-green">7 of 9 tracked hand surgery queries</span> in the Irving/Southlake market.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Hand surgery is high-volume but under-monetized in All-Star\'s current digital footprint. Hahn has the credentials but the website doesn\'t support his volume potential. <span class="hl-blue">Texas Bone &amp; Joint</span> is winning these terms through depth, not authority. Building out 6 procedure-specific hand pages (trigger finger, De Quervain\'s, ganglion cyst, Dupuytren\'s, basal joint arthritis, cubital tunnel) would close the gap and likely overtake them within 90 days given All-Star\'s domain authority advantage.'
+          },
+          {
+            label: "The Opportunity",
+            body: '6 new hand procedure pages, each 1,200-1,500 words with Dr. Hahn-attributed FAQ blocks, candidacy criteria, recovery timeline, and MedicalProcedure schema. Geo-target the highest-volume city (Irving) on the cornerstone page. Forecasted <span class="hl-green">+170 monthly organic visits</span> across the hand vertical at maturity, with strong commercial intent (most hand surgery is commercially insured outpatient procedure work).'
+          }
+        ],
+        procedure: {
+          title: "Organic Gap Capture",
+          bullets: [
+            { bold: "Page Production:", text: "Build 6 procedure-specific hand surgery pages (trigger finger, De Quervain\'s, ganglion cyst, Dupuytren\'s, basal joint arthritis, cubital tunnel)." },
+            { bold: "Surgeon Attribution:", text: "Each page bylined to Dr. Hahn with credentials, fellowship, and patient testimonials integrated." },
+            { bold: "Schema &amp; Internal Links:", text: "MedicalProcedure + FAQPage schema, internal linking to provider profile, location pages, and patient testimonial pages." },
+            { bold: "Tracking:", text: "Daily SERP monitoring on 9 hand surgery keywords for 90 days post-deployment." }
+          ],
+          cost: "21 Credits"
+        }
+      },
+
+      "ip-1": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "URL Structure Consolidation",
+        progress: 55,
+        query: "URL architecture audit and consolidation across the All-Star Orthopaedics WordPress site",
+        sections: [
+          {
+            label: "The Data",
+            body: 'All-Star\'s WordPress site has accumulated three competing URL patterns for provider pages: <span class="hl-green">/doctors/</span>, <span class="hl-green">/our-doctors/</span>, and <span class="hl-green">/orthopaedic-surgeon-dr-x/</span> long-form slugs. Phase 1 audit catalogued <span class="hl-green">47 affected URLs</span> with overlapping content, duplicate title tags on <span class="hl-green">9 surgeon profiles</span>, and link equity split across multiple URLs for the same physician. Migration map and redirect plan are signed off.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'The split URL pattern is silently bleeding ranking signals. Dr. Greenberg, Dr. Hurt, and Dr. Tsay each have inbound links pointing to two different surgeon URLs, meaning Google is dividing authority across duplicates rather than consolidating it on a canonical page. The <span class="hl-blue">/orthopaedic-surgeon-dr-x/</span> long-form pattern was a 2018 attempt at keyword-stuffed slugs that never got cleaned up. Consolidating to a single <span class="hl-green">/our-doctors/{name}</span> structure with proper 301 redirects should recover an estimated <span class="hl-green">15-25% of lost link equity</span> on the surgeon vertical.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Phase 2 (consolidation, 301 redirects, internal link rewrites, sitemap regeneration) is in active build on staging. Phase 3 (production deployment with Search Console resubmission and 60-day monitoring) is queued for early May. Once complete, every surgeon will have one canonical URL with consolidated authority, cleaner crawl paths, and a foundation for the upcoming E-E-A-T provider page refresh (ip-3).'
+          }
+        ],
+        procedure: {
+          title: "URL Structure Consolidation",
+          bullets: [
+            { bold: "Completed:", text: "Phase 1 audit of 47 affected URLs, duplicate content map, signed-off migration plan and redirect schema" },
+            { bold: "In Progress:", text: "Phase 2 staging build with 301 redirects, internal link rewrites, and sitemap regeneration (55% overall)" },
+            { bold: "Next:", text: "Production deployment, Search Console resubmission, 60-day crawl and ranking monitoring" }
+          ],
+          cost: "24 Credits (allocated)"
+        }
+      },
+
+      "ip-2": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Argyle Market Launch SEO Push",
+        progress: 70,
+        query: "geo-targeted launch SEO build for the new All-Star Argyle office (7214 Crawford Rd)",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Argyle is All-Star\'s newest location at <span class="hl-green">7214 Crawford Rd</span>, opened directly into a market where competitors already had presence. Build status: GBP claimed and fully populated, <span class="hl-green">12 of 16 geo-targeted pages</span> live (orthopedic surgeon Argyle, knee replacement Argyle, sports medicine Argyle, hand surgeon Argyle, plus 8 condition pages), NAP harmonized across <span class="hl-green">22 directories</span>, and <span class="hl-green">4 of 6 supporting blog posts</span> published.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Argyle SERPs were a clean field at launch but competitors are not standing still. Two competitors have started publishing Argyle-modified content in the last 60 days, which compresses the window for All-Star to claim default visibility. The good news: All-Star\'s GBP is already showing in <span class="hl-green">local pack #2-3</span> for <span class="hl-green">"orthopedic surgeon Argyle TX"</span> and the geo-page cluster is starting to pick up impressions in Search Console. Reputation flywheel (post-visit review requests) is live and generating <span class="hl-green">~8-10 reviews per month</span> from the new patient flow.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Final 4 geo-pages and 2 supporting blog posts publish over the next 3 weeks. After production wraps, the play moves into a 60-day monitoring window with light optimization based on observed query patterns and local pack movement. Forecasted <span class="hl-green">+220 monthly organic visits</span> across the Argyle cluster at maturity, plus a meaningful lift in new patient acquisition from the local pack.'
+          }
+        ],
+        procedure: {
+          title: "Argyle Market Launch SEO Push",
+          bullets: [
+            { bold: "Completed:", text: "GBP claim and full build, 12 of 16 geo-pages published, NAP harmonized across 22 directories, 4 of 6 supporting blog posts live" },
+            { bold: "In Progress:", text: "Final 4 geo-pages and 2 blog posts in physician review and production (70% overall)" },
+            { bold: "Next:", text: "Production deployment, 60-day local pack and SERP monitoring, integration with the broader 5-location footprint" }
+          ],
+          cost: "23 Credits (allocated)"
+        }
+      },
+
+      "ip-3": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "In Progress",
+        priorityClass: "badge--source",
+        title: "Provider Page E-E-A-T Refresh",
+        progress: 85,
+        query: "E-E-A-T optimization and Physician schema deployment across the All-Star surgeon roster",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refresh covers <span class="hl-green">8 surgeon profiles</span>: Greenberg, Hurt, Tsay, Honig, Hahn, Straus, Runner, and Schott. Each page is being rebuilt with full <span class="hl-green">Physician schema</span>, fellowship credentials, hospital affiliations, named procedures, board certifications, and structured patient testimonials. <span class="hl-green">7 of 8 pages</span> are deployed; final page (Schott) is in physician review for fact-check sign-off.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Provider pages are the single highest-leverage E-E-A-T surface for an orthopedic practice. Google\'s YMYL evaluation favors physician pages that expose verifiable credentials, named procedures, and real patient outcomes in structured formats. The previous All-Star surgeon pages were narrative bios with light credential lists and no schema, which under-represented surgeons like <span class="hl-blue">Dr. Hurt (sports med since 2009)</span> and <span class="hl-blue">Dr. Greenberg (founder, 1997)</span>. Early signals on the 7 deployed pages: <span class="hl-green">+18% impressions</span> and <span class="hl-green">3 surgeons</span> now appearing in expanded knowledge panel results for branded queries.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Final page deploys within 7-10 days. Refresh feeds directly into the Knee Replacement Hub (rec-1) and Hand Surgery Content Gap (rec-4) plays since strengthened surgeon authority pages improve the credibility signal of any procedure page they\'re linked from. Once complete, every All-Star surgeon will have a YMYL-grade page with full Physician schema and credentialed authority.'
+          }
+        ],
+        procedure: {
+          title: "Provider Page E-E-A-T Refresh",
+          bullets: [
+            { bold: "Completed:", text: "7 of 8 surgeon pages rebuilt with Physician schema, fellowship credentials, hospital affiliations, named procedures, and structured testimonials" },
+            { bold: "In Progress:", text: "Final page (Dr. Schott) in physician review for fact-check sign-off (85% overall)" },
+            { bold: "Next:", text: "Final deployment, Search Console rich result validation, 60-day knowledge panel and ranking monitoring" }
+          ],
+          cost: "27 Credits (allocated)"
+        }
+      },
+
+      "comp-1": {
+        source: "Local SEO",
+        sourceIcon: ICON_GBP,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "Q1 GBP Optimization: 5 Locations",
+        query: "Google Business Profile refresh across all 5 All-Star Orthopaedics office locations",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed all 5 All-Star Google Business Profiles in February-March (<span class="hl-blue">Irving HQ, Southlake, Flower Mound, Alliance/Fort Worth, Argyle</span>): corrected primary categories, expanded service descriptions, deployed photo updates from a coordinated practice shoot, refreshed Q&amp;A seeding, and added structured posts for Q2 procedure focuses (knee replacement, sports medicine, hand surgery).'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Across all 5 locations: <span class="hl-green">+29% direction requests</span>, <span class="hl-green">+24% profile views</span>, and <span class="hl-green">+17% calls</span> in the 60 days post-deployment. Strongest lifts in <span class="hl-blue">Argyle (+52%)</span> and <span class="hl-blue">Alliance (+38%)</span>, where prior GBP content had been thinnest. <span class="hl-blue">Irving HQ</span> saw smaller % gains but the largest absolute volume increase given baseline traffic.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'GBP optimization is now integrated into All-Star\'s ongoing care. Weekly post schedule, monthly review response cadence, and quarterly photo refreshes are standardized. Next refresh cycle scheduled for July 2026 to capture summer search behavior and any seasonal sports-injury demand.'
+          }
+        ],
+        procedure: {
+          title: "Q1 GBP Optimization: 5 Locations",
+          bullets: [
+            { bold: "Completed:", text: "All 5 profiles fully refreshed with categories, descriptions, photos, Q&amp;A, and Q2 posts" },
+            { bold: "Result:", text: "+29% direction requests, +24% profile views, +17% calls across the network" },
+            { bold: "Status:", text: "Ongoing maintenance integrated, next refresh July 2026" }
+          ],
+          cost: "16 Credits (spent)"
+        }
+      },
+
+      "comp-2": {
+        source: "Technical SEO",
+        sourceIcon: ICON_CODE,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "D Magazine 'Top Doc' Schema Capture",
+        query: "structured data deployment to surface D Magazine 2024 Top Doctor recognition in SERP",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Deployed <span class="hl-green">Award schema</span> and updated Physician schema markup across <span class="hl-green">8 surgeon profile pages</span> in March to expose <span class="hl-blue">D Magazine "Top Doctor 2024"</span> recognition. Pages were also annotated with <span class="hl-blue">Becker\'s Spine</span> and <span class="hl-blue">Southlake Style "Top Docs"</span> recognitions where applicable.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Award and recognition signals are an underused E-E-A-T lever in healthcare SEO. All-Star had genuine third-party recognitions (D Magazine, Becker\'s, Southlake Style) but none were structured for search engines to read. Within 30 days of deployment, all <span class="hl-green">8 surgeons</span> are now showing award badges in branded SERP results, and the rich result is appearing in expanded knowledge panels for <span class="hl-blue">Greenberg, Hurt, Tsay, and Honig</span> on physician-name searches.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'This work fed directly into the broader Provider Page E-E-A-T Refresh (ip-3). Award schema is now part of the standard physician page template, so any future recognitions (2025 D Magazine list, Becker\'s annual lists) can be added by a single field update without rework. Foundation for stronger branded SERP appearance and AI summary credibility.'
+          }
+        ],
+        procedure: {
+          title: "D Magazine 'Top Doc' Schema Capture",
+          bullets: [
+            { bold: "Completed:", text: "Award schema deployed across 8 surgeon profile pages with D Magazine, Becker\'s Spine, and Southlake Style recognitions" },
+            { bold: "Result:", text: "8 surgeons now showing award badges in SERP, 4 surfacing in expanded knowledge panel for branded queries" },
+            { bold: "Status:", text: "Schema template productized, ready to absorb 2025 recognitions as they\'re announced" }
+          ],
+          cost: "12 Credits (spent)"
+        }
+      },
+
+      "comp-3": {
+        source: "Competitive Intel",
+        sourceIcon: ICON_RADAR,
+        priority: "Completed",
+        priorityClass: "badge--credits",
+        title: "North DFW Competitive Landscape Refresh",
+        query: "competitor identification and tracking refresh for the North DFW orthopedic corridor",
+        sections: [
+          {
+            label: "The Data",
+            body: 'Refreshed All-Star\'s competitive tracking set for 2026: <span class="hl-green">14 North DFW corridor competitors</span> profiled with current location count, surgeon roster, schema implementation, blog cadence, paid search activity, and estimated organic traffic. Full ranking baselines refreshed across <span class="hl-green">1,800 keywords</span> covering the Irving / Southlake / Flower Mound / Alliance / Argyle service area.'
+          },
+          {
+            label: "Genius Analysis",
+            body: 'Most consequential 2026 finding: <span class="hl-blue">Texas Bone &amp; Joint</span> (tbjortho.com) is the most direct overlap competitor in <span class="hl-blue">Las Colinas</span> and <span class="hl-blue">Southlake</span>, with a measurable Q4 2025 content and schema investment lifting their visibility on knee replacement and sports medicine queries. <span class="hl-blue">Precision Orthopedics &amp; Sports Medicine</span> is the strongest Southlake/Irving secondary competitor. <span class="hl-blue">Texas Health Orthopedic Specialists</span> is the hospital-employed comparison set with strong brand recognition but slower content velocity.'
+          },
+          {
+            label: "The Opportunity",
+            body: 'Refreshed tracking is now feeding the AI model continuously. All four current opportunity plays (rec-1 through rec-4) are direct outputs of this refreshed competitive view. Tracking will refresh again at end of Q3 with particular focus on Argyle market dynamics as that office matures.'
+          }
+        ],
+        procedure: {
+          title: "North DFW Competitive Landscape Refresh",
+          bullets: [
+            { bold: "Completed:", text: "14 corridor competitors profiled, 1,800 keywords baselined, 5 ranking shifts flagged for follow-up plays" },
+            { bold: "Result:", text: "4 active opportunity plays (rec-1 through rec-4) generated from the refreshed competitive view" },
+            { bold: "Status:", text: "Continuous monitoring active; next full refresh at end of Q3 with Argyle market focus" }
+          ],
+          cost: "10 Credits (spent)"
+        }
+      }
+    };
+
+    function renderDetail(playId) {
+      var play = PLAYS[playId];
+      if (!play) {
+        document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">Select a play to view details</div>';
+        return;
+      }
+      var sectionsHtml = play.sections.map(function(s) {
+        return '<div class="detail-section">' +
+          '<div class="detail-section__label">' + s.label + '</div>' +
+          '<div class="detail-section__body">' + s.body + '</div>' +
+        '</div>';
+      }).join('');
+      var bulletsHtml = play.procedure.bullets.map(function(b) {
+        return '<li><strong>' + b.bold + '</strong> ' + b.text + '</li>';
+      }).join('');
+      var isCompleted = playId.startsWith('comp-');
+      var isInProgress = playId.startsWith('ip-');
+      var progressHtml = '';
+      if (isInProgress) {
+        var pct = play.progress || 0;
+        var barColor = pct >= 60 ? 'var(--metric-green)' : 'var(--amber)';
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: ' + pct + '%; background: ' + barColor + ';"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: ' + barColor + ';">' + pct + '% Complete</div>' +
+          '</div>';
+      } else if (isCompleted) {
+        progressHtml =
+          '<div class="detail-progress">' +
+            '<div class="detail-progress__label">Execution Progress</div>' +
+            '<div class="detail-progress__bar">' +
+              '<div class="detail-progress__fill" style="width: 100%; background: var(--metric-green);"></div>' +
+            '</div>' +
+            '<div class="detail-progress__pct" style="color: var(--metric-green);">100% Complete</div>' +
+          '</div>';
+      }
+      var procedureHtml =
+        '<div class="procedure-block">' +
+          '<div class="procedure-block__header">' +
+            '<div class="procedure-block__icon">' + ICON_ROCKET + '</div>' +
+            '<span class="procedure-block__label">Recommended Strategic Play</span>' +
+          '</div>' +
+          '<div class="procedure-block__title">' + play.procedure.title + '</div>' +
+          '<ul class="procedure-block__list">' + bulletsHtml + '</ul>' +
+          '<div class="procedure-block__cost">Cost: ' + play.procedure.cost + '</div>' +
+          (!(isInProgress || isCompleted) ?
+            '<div class="procedure-block__actions">' +
+              '<button class="btn btn--primary" onclick="handleLaunch(\'' + playId + '\')">' + ICON_LAUNCH_SM + ' Launch Play</button>' +
+              '<button class="btn btn--ghost" onclick="handleDismiss(\'' + playId + '\')">' + ICON_X_SM + ' Dismiss</button>' +
+            '</div>' +
+            '<div id="demo-notice-area"></div>'
+          : '') +
+        '</div>';
+      var bottomHtml = (isInProgress || isCompleted) ? procedureHtml + progressHtml : procedureHtml;
+      var html =
+        '<div class="detail-header">' +
+          '<div class="detail-header__icon">' + play.sourceIcon + '</div>' +
+          '<span class="detail-header__source">' + play.source + '</span>' +
+          '<span class="badge ' + play.priorityClass + ' detail-header__priority">' + (isCompleted || isInProgress ? '' : 'Priority: ') + play.priority + '</span>' +
+        '</div>' +
+        '<div class="detail-title">' + play.title + '</div>' +
+        '<div class="detail-query-box">' + play.query + '</div>' +
+        sectionsHtml + bottomHtml;
+      document.getElementById('detail-panel').innerHTML = html;
+    }
+
+    var currentSelected = 'rec-1';
+    var unreadCount = 2;
+
+    function selectPlay(playId, element) {
+      document.querySelectorAll('.play-item.selected, .play-item-ip.selected, .play-item-completed.selected').forEach(function(el) {
+        el.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      if (element.classList.contains('play-item') && !element.classList.contains('read')) {
+        element.classList.add('read');
+        unreadCount = Math.max(0, unreadCount - 1);
+        document.getElementById('unread-count').textContent = unreadCount;
+        if (unreadCount > 0) {
+          document.getElementById('recommended-badge').textContent = unreadCount + ' new';
+        } else {
+          document.getElementById('recommended-badge').textContent = '0 new';
+          var pulse = document.getElementById('unread-pulse');
+          if (pulse) pulse.style.display = 'none';
+        }
+      }
+      currentSelected = playId;
+      renderDetail(playId);
+    }
+
+    document.querySelectorAll('.play-item').forEach(function(el) {
+      el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+    });
+    document.querySelectorAll('.play-item-ip').forEach(function(el) {
+      el.addEventListener('click', function() {
+        document.querySelectorAll('.play-item.selected, .play-item-completed.selected, .play-item-ip.selected').forEach(function(s) {
+          s.classList.remove('selected');
+        });
+        el.classList.add('selected');
+        currentSelected = el.dataset.playId;
+        renderDetail(el.dataset.playId);
+      });
+    });
+    function bindCompletedPlays() {
+      document.querySelectorAll('.play-item-completed').forEach(function(el) {
+        if (el.dataset.bound) return;
+        el.dataset.bound = 'true';
+        el.addEventListener('click', function() { selectPlay(el.dataset.playId, el); });
+      });
+    }
+    var toggleLink = document.getElementById('toggle-completed');
+    var completedSection = document.getElementById('completed-section');
+    var completedVisible = false;
+    toggleLink.addEventListener('click', function() {
+      completedVisible = !completedVisible;
+      if (completedVisible) {
+        completedSection.classList.add('visible');
+        toggleLink.textContent = 'Hide completed plays';
+        bindCompletedPlays();
+      } else {
+        completedSection.classList.remove('visible');
+        toggleLink.textContent = 'Show 3 completed plays';
+      }
+    });
+
+    function showDemoNotice(message) {
+      var area = document.getElementById('demo-notice-area');
+      if (!area) return;
+      var existing = area.querySelector('.demo-notice');
+      if (existing) existing.remove();
+      var notice = document.createElement('div');
+      notice.className = 'demo-notice';
+      notice.textContent = message;
+      area.appendChild(notice);
+    }
+    function handleLaunch(playId) {
+      showDemoNotice('This is a demo. In the live platform, this would launch the play and deduct credits from your balance.');
+    }
+    function handleDismiss(playId) {
+      showDemoNotice('This is a demo. In the live platform, this play would be dismissed and moved to your archive.');
+    }
+
+    renderDetail('rec-1');
+  </script>
+</body>
+</html>
